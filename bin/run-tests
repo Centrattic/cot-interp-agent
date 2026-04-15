@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Test trigger — called by the strategy agent when it runs `test`.
+# Delegates to src/run_tests.py which launches parallel test agents.
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session."
+    exit 1
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/run_tests.py" "$@"
