@@ -9,8 +9,33 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Use python3 if available, fall back to python
-PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+# Resolve a usable Python interpreter.
+# Preference: explicit PYTHON env var > uv-managed install > python3/python on PATH.
+resolve_python() {
+    if [[ -n "${PYTHON:-}" ]] && [[ -x "$PYTHON" || -f "$PYTHON" ]]; then
+        echo "$PYTHON"; return
+    fi
+    # uv-managed installs (Windows)
+    for candidate in "$APPDATA/uv/python"/*/python.exe "$HOME/.local/share/uv/python"/*/python.exe; do
+        if [[ -f "$candidate" ]]; then echo "$candidate"; return; fi
+    done
+    # uv fallback
+    if command -v uv >/dev/null 2>&1; then
+        local uv_python
+        uv_python="$(uv python find 2>/dev/null || true)"
+        if [[ -n "$uv_python" && -f "$uv_python" ]]; then echo "$uv_python"; return; fi
+    fi
+    # System Python (but avoid Microsoft Store stub on Windows)
+    for cmd in python3 python; do
+        local p
+        p="$(command -v "$cmd" 2>/dev/null || true)"
+        if [[ -n "$p" && "$p" != *"Microsoft/WindowsApps"* ]]; then
+            echo "$p"; return
+        fi
+    done
+}
+
+PYTHON="$(resolve_python)"
 
 if [[ -z "$PYTHON" ]]; then
     echo "Error: Python not found. Install Python 3.10+ or set PYTHON env var."

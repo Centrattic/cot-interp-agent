@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Ask the model a short (≤10-token) follow-up question about an example
+# and read the first 5 tokens of its response. No logit access.
+#
+# Usage: ask <example_id> "<question>"
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session." >&2
+    exit 1
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/ask.py" "$@"

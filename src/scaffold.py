@@ -14,6 +14,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -51,72 +52,116 @@ def load_task_metadata(task_name: str) -> dict:
     return {"name": task_name, "description": f"Classification task: {task_name}"}
 
 
-def build_examples_csv(task_name: str, output_path: Path):
-    """Read few-shot JSON examples and write Examples.csv."""
-    few_shot_dir = DATA_DIR / task_name / "few-shot"
-    if not few_shot_dir.exists():
-        print(f"Warning: {few_shot_dir} does not exist, creating empty Examples.csv")
-        output_path.write_text("id,content,label\n")
-        return
+def populate_few_shot(task_name: str, strategy_dir: Path) -> list[dict]:
+    """Copy raw few-shot JSONs into strategy/few-shot/ and write an index CSV.
 
-    examples = []
-    for json_file in sorted(few_shot_dir.glob("*.json")):
-        with open(json_file) as f:
+    Returns a list of {id, label} entries.
+    """
+    src_dir = DATA_DIR / task_name / "few-shot"
+    dst_dir = strategy_dir / "few-shot"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    index = []
+    if not src_dir.exists():
+        print(f"Warning: {src_dir} does not exist")
+        (strategy_dir / "Examples.csv").write_text("id,label,path\n")
+        return index
+
+    for json_file in sorted(src_dir.glob("*.json")):
+        shutil.copy2(json_file, dst_dir / json_file.name)
+        with open(json_file, encoding="utf-8") as f:
             data = json.load(f)
-        example_id = json_file.stem
-        # Flatten: extract common fields, keep rest as JSON string
-        examples.append({
-            "id": example_id,
-            "content": json.dumps(data.get("content", data), ensure_ascii=False),
+        index.append({
+            "id": json_file.stem,
             "label": data.get("label", ""),
-            "has_activations": (few_shot_dir / f"{example_id}.npy").exists(),
+            "path": f"few-shot/{json_file.name}",
         })
+        # Copy companion .npy if present
+        npy = src_dir / f"{json_file.stem}.npy"
+        if npy.exists():
+            shutil.copy2(npy, dst_dir / npy.name)
 
-    if not examples:
-        output_path.write_text("id,content,label,has_activations\n")
-        return
-
-    with open(output_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["id", "content", "label", "has_activations"])
+    with open(strategy_dir / "Examples.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "label", "path"])
         writer.writeheader()
-        writer.writerows(examples)
+        writer.writerows(index)
 
-    print(f"Wrote {len(examples)} examples to Examples.csv")
+    print(f"Copied {len(index)} few-shot examples into {dst_dir}")
+    return index
 
 
-def generate_readme(task_meta: dict, run_dir: Path):
-    """Generate README.md for the strategy directory."""
-    readme = f"""# {task_meta['name']}
+TOOL_DESCRIPTIONS = {
+    # Populate as custom tools are added. Key = tool name, value = one-line description.
+}
+
+
+def render_tools_section(tools: list[str]) -> str:
+    if not tools:
+        return (
+            "This run has **no custom research tools enabled**. "
+            "You have standard file I/O (Read, Write, Edit, Bash, Glob, Grep) only."
+        )
+    lines = ["The following custom research tools are available on your PATH:\n"]
+    for name in tools:
+        desc = TOOL_DESCRIPTIONS.get(name, "(no description)")
+        lines.append(f"- `{name}` — {desc}")
+    return "\n".join(lines)
+
+
+def generate_readme(task_meta: dict, tools: list[str], examples_index: list[dict], run_dir: Path):
+    """Generate README.md for the strategy directory, tailored to task + tool set."""
+    label_counts = {}
+    for e in examples_index:
+        label_counts[e["label"]] = label_counts.get(e["label"], 0) + 1
+    label_summary = ", ".join(f"label={k}: {v}" for k, v in sorted(label_counts.items()))
+
+    readme = f"""# Task: {task_meta['name']}
 
 ## Task Description
 {task_meta['description']}
 
+## Labels
+- `label = 1` (positive) → answer **yes**
+- `label = 0` (negative) → answer **no**
+
 ## Workspace Contents
-- **STRATEGY.md** — Write your classification strategy here
-- **Examples.csv** — Few-shot examples with labels
-- Any additional CSV files you create will be available to test agents
+- `README.md` — this file
+- `STRATEGY.md` — write your classification strategy here (test agents will read it)
+- `Examples.csv` — index of few-shot examples (id, label, path)
+- `few-shot/` — raw JSON files for the {len(examples_index)} few-shot examples ({label_summary})
 
-## Available Commands
-- `test` — Evaluate your strategy against test examples
+## Research Tools
+{render_tools_section(tools)}
+
+## The `test` command
+Running `test` evaluates your current strategy against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the contents of this `strategy/` directory plus its own single test example. Call `test` when STRATEGY.md is ready.
+
+## Instructions
+1. Study the few-shot JSONs in `few-shot/` to understand what distinguishes positive from negative examples.
+2. Write a clear, concrete classification strategy in `STRATEGY.md`. Test agents follow it literally.
+3. Optionally create supporting CSVs or notes in this directory; reference them from STRATEGY.md.
+4. Run `test` when ready.
 """
-    (run_dir / "strategy" / "README.md").write_text(readme)
+    (run_dir / "strategy" / "README.md").write_text(readme, encoding="utf-8")
 
 
-def create_run(task_name: str, description: str | None = None):
+def create_run(task_name: str, description: str | None = None, tools: list[str] | None = None):
     """Create a new agent run for a task and launch the strategy agent."""
     task_dir = DATA_DIR / task_name
     if not task_dir.exists():
         print(f"Error: Task '{task_name}' not found in {DATA_DIR}")
         sys.exit(1)
 
-    # Create run directory
+    tools = list(tools or [])
+
+    # Create run directory. Per-test folders are created later by run_tests.py as
+    # siblings of strategy/ (test-000/, test-001/, ...).
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir = RUNS_DIR / task_name / f"run-{run_id}"
     strategy_dir = run_dir / "strategy"
-    test_dir = run_dir / "test"
     trace_dir = TRACES_DIR / task_name / f"run-{run_id}"
 
-    for d in [strategy_dir, test_dir, trace_dir]:
+    for d in [strategy_dir, trace_dir]:
         d.mkdir(parents=True, exist_ok=True)
 
     # Load task metadata
@@ -124,12 +169,14 @@ def create_run(task_name: str, description: str | None = None):
     if description:
         task_meta["description"] = description
 
-    # Generate strategy workspace files
-    generate_readme(task_meta, run_dir)
+    # Populate few-shot workspace (copies raw JSONs into strategy/few-shot/)
+    examples_index = populate_few_shot(task_name, strategy_dir)
+
+    # Generate task-and-toolset-specific README
+    generate_readme(task_meta, tools, examples_index, run_dir)
     (strategy_dir / "STRATEGY.md").write_text(
         "# Strategy\n\n<!-- Write your classification strategy here -->\n"
     )
-    build_examples_csv(task_name, strategy_dir / "Examples.csv")
 
     # Save run metadata
     run_meta = {
@@ -137,6 +184,7 @@ def create_run(task_name: str, description: str | None = None):
         "run_id": run_id,
         "created": datetime.now().isoformat(),
         "status": "running",
+        "tools": tools,
         "task_meta": task_meta,
     }
     with open(run_dir / "run.json", "w") as f:
@@ -162,27 +210,27 @@ export PATH="{BIN_DIR.as_posix()}:$PATH"
         print(f"Error: Strategy prompt not found at {strategy_prompt_path}")
         sys.exit(1)
 
-    task_desc = task_meta["description"]
     user_prompt = (
-        f"You are working on task: {task_name}\n\n"
-        f"Task description: {task_desc}\n\n"
-        f"Your workspace is the current directory (strategy/).\n"
-        f"Study the few-shot examples, develop a classification strategy, "
-        f"write it to STRATEGY.md, and run `test` when ready."
+        "Read README.md in the current directory for the task brief, available tools, "
+        "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
+        "and run `test` when ready."
     )
 
+    # Do NOT pass --add-dir to the raw task dir: the strategy agent must not
+    # read data/<task>/test/ (those JSONs still contain the ground-truth label).
+    # Few-shot examples are already copied into strategy/few-shot/.
     cmd = [
         "claude",
         "--print",
         "--dangerously-skip-permissions",
         "--system-prompt-file", str(strategy_prompt_path),
-        "--add-dir", str(task_dir),
         "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
         user_prompt,
     ]
 
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
+    env["AGENT_TYPE"] = "strategy"
 
     print(f"Launching strategy agent for {task_name}...")
     trace_file = trace_dir / "strategy-trace.txt"
@@ -236,12 +284,10 @@ def show_status(run_id: str | None = None):
         return
 
     for r in runs:
-        test_dir = RUNS_DIR / r["task"] / f"run-{r['run_id']}" / "test"
-        test_count = sum(1 for d in test_dir.iterdir() if d.is_dir()) if test_dir.exists() else 0
-        answer_count = sum(
-            1 for d in test_dir.iterdir()
-            if d.is_dir() and (d / "answer.txt").exists()
-        ) if test_dir.exists() else 0
+        rd = RUNS_DIR / r["task"] / f"run-{r['run_id']}"
+        test_folders = [d for d in rd.iterdir() if d.is_dir() and d.name.startswith("test-")]
+        test_count = len(test_folders)
+        answer_count = sum(1 for d in test_folders if (d / "answer.txt").exists())
 
         print(f"  {r['task']}/run-{r['run_id']}  status={r['status']}  "
               f"tests={answer_count}/{test_count}  created={r['created']}")
@@ -256,6 +302,11 @@ def main():
     run_parser = sub.add_parser("run", help="Launch a strategy agent on a task")
     run_parser.add_argument("task_name", help="Name of task folder in data/")
     run_parser.add_argument("--description", help="Override task description")
+    run_parser.add_argument(
+        "--tools",
+        default="",
+        help="Comma-separated list of custom research tools to enable (default: empty)",
+    )
 
     status_parser = sub.add_parser("status", help="Show run status")
     status_parser.add_argument("run_id", nargs="?", help="Filter by run ID")
@@ -265,7 +316,8 @@ def main():
     if args.command == "init":
         init()
     elif args.command == "run":
-        create_run(args.task_name, args.description)
+        tools = [t.strip() for t in args.tools.split(",") if t.strip()]
+        create_run(args.task_name, args.description, tools)
     elif args.command == "status":
         show_status(args.run_id)
     else:

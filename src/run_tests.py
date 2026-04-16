@@ -52,7 +52,7 @@ def collect_test_examples(data_test_dir: Path) -> list[dict]:
 def run_single_test(
     test_index: int,
     example: dict,
-    test_dir: Path,
+    run_dir: Path,
     strategy_dir: Path,
     trace_dir: Path,
     prompt_path: Path,
@@ -60,22 +60,25 @@ def run_single_test(
     bashrc_path: Path,
 ) -> dict:
     """Run a single test agent on one example. Returns result dict."""
-    # Create test folder
-    test_folder = test_dir / str(test_index)
+    # Per-test folder sits directly under run_dir, sibling to strategy/
+    test_folder = run_dir / f"test-{test_index:03d}"
     test_folder.mkdir(parents=True, exist_ok=True)
 
-    # Copy test example into the folder
-    shutil.copy2(example["json_path"], test_folder / "example.json")
+    # Copy test example into the folder, but strip the ground-truth label first
+    # so the test agent cannot cheat by reading example.json.
+    redacted = {k: v for k, v in example["data"].items() if k != "label"}
+    with open(test_folder / "example.json", "w", encoding="utf-8") as f:
+        json.dump(redacted, f, indent=2, ensure_ascii=False)
     if example["npy_path"]:
         shutil.copy2(example["npy_path"], test_folder / "example.npy")
 
-    # Build user prompt with the test example content
-    example_content = json.dumps(example["data"], indent=2, ensure_ascii=False)
     user_prompt = (
-        f"Task: {task_description}\n\n"
-        f"Test example (id={example['id']}):\n{example_content}\n\n"
-        f"Read the strategy from the strategy/ directory, apply it to this example, "
-        f"and write your answer to answer.txt (exactly 'yes' or 'no')."
+        f"You are classifying one test example (id={example['id']}).\n"
+        f"The example is in `example.json` in your current directory "
+        f"(ground-truth label has been removed).\n"
+        f"Read STRATEGY.md (and any referenced files) from the strategy/ directory, "
+        f"apply the strategy to this example, and write your answer to `answer.txt` — "
+        f"exactly `yes` or `no`, no other text."
     )
 
     cmd = [
@@ -90,8 +93,9 @@ def run_single_test(
 
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
+    env["AGENT_TYPE"] = "test"
 
-    trace_file = trace_dir / f"test-{test_index}-trace.txt"
+    trace_file = trace_dir / f"test-{test_index:03d}-trace.txt"
 
     result = subprocess.run(
         cmd,
@@ -127,7 +131,6 @@ def main():
 
     data_test_dir = scaffold_root / "data" / task_name / "test"
     strategy_dir = run_dir / "strategy"
-    test_dir = run_dir / "test"
     trace_dir = scaffold_root / "agent-traces" / task_name / f"run-{run_id}"
     prompt_path = scaffold_root / "prompts" / "test-agent.md"
     bashrc_path = run_dir / "agent.bashrc"
@@ -159,13 +162,13 @@ def main():
     trace_dir.mkdir(parents=True, exist_ok=True)
     results = []
 
-    max_workers = min(len(examples), 8)
+    max_workers = min(len(examples), int(os.environ.get("AGENT_TEST_MAX_WORKERS", "10")))
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {}
         for i, example in enumerate(examples):
             future = executor.submit(
                 run_single_test,
-                i, example, test_dir, strategy_dir, trace_dir,
+                i, example, run_dir, strategy_dir, trace_dir,
                 prompt_path, task_description, bashrc_path,
             )
             futures[future] = i
@@ -181,9 +184,9 @@ def main():
                 print(f"  Test {idx}: ERROR - {e}")
                 results.append({"index": idx, "example_id": "?", "answer": None, "exit_code": -1})
 
-    # Sort by index and write results CSV
+    # Sort by index and write results CSV at the run root (sibling of test-NNN/ folders)
     results.sort(key=lambda r: r["index"])
-    results_path = test_dir / "results.csv"
+    results_path = run_dir / "results.csv"
     with open(results_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["index", "example_id", "answer", "exit_code"])
         writer.writeheader()
