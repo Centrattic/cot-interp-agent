@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The example contains only `chain_of_thought` (no metadata), so I applied Rule 4: the CoT is ~20k characters with extensive re-verification, multiple independent approaches, dense case analysis, and repeated restarts — all strong indicators of an atypically long rollout.

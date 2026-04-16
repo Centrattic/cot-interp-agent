@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The example lacks length metadata, so Rule 4 (content heuristics) applies. The CoT shows extremely high verification density (35 "Wait"s, multiple restart-from-scratch passes redoing the n=2 case) at ~5000 characters — strongly indicating an atypically long rollout.

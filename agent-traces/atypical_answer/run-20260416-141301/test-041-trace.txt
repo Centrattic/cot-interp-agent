@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT shows strong Signal B (explicit "depends on the situation" + weak "I might lean towards" / "I think the answer would be" commitment), plus Signal D support (deliberation-heavy with no clean decisive conclusion), indicating a minority/atypical rollout.

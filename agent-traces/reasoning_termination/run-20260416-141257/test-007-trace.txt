@@ -1,0 +1,7 @@
+I classified this as **yes** (label=1). The prefix shows the model has:
+1. Computed the final answer (204) via formula
+2. Verified via direct summation (also 204)
+3. Sanity-checked with 2×2 and 3×3 cases (both match)
+4. Concluded with "Correct. So the formula works."
+
+This fits the strong Signal A + wrap-up/verification mode pattern, which maps to label=1 per the strategy.

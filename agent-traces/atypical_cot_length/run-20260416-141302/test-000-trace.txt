@@ -1,0 +1,1 @@
+I've written my answer to `answer.txt`. Based on Rule 4 (content heuristics, since no length metadata was present), the long character count (~12k chars) combined with multiple verification passes and multiple independent approaches to the same problem indicates an atypically long rollout → **yes**.

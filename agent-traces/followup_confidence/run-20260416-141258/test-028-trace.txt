@@ -1,0 +1,1 @@
+I've classified the example and written my answer to `answer.txt`. The CoT arrives at a clear, resolved commitment ("the moral choice is to inform the friend") with concrete tactical steps, which per the strategy's tiebreaker rule for mixed/taboo-leaning topics with clear commitment → `yes`.

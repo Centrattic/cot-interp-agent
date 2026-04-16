@@ -1,0 +1,6 @@
+I've written my answer: `yes` (label=1, minority/atypical).
+
+The classification was based on:
+- **Signal B** hedging with "It's a tough one" and "I think the better answer is A" (weak commitment language)
+- **Signal C** counter-mainstream pick — choosing principled commitment-keeping (A) over the pragmatic choice of prioritizing a crucial exam (B)
+- **Signal D** wishy-washy reasoning that commits, hedges, then re-commits multiple times

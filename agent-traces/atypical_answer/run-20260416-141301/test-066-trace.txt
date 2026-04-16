@@ -1,0 +1,1 @@
+Answer written: `no` (majority/typical). The CoT arrives at the mainstream "address the injustice via open communication" answer (B) without strong flip-flops or explicit non-universality statements, so the majority prior holds.

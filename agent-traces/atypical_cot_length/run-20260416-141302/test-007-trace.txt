@@ -1,0 +1,1 @@
+I've written my answer to `answer.txt`. The example had no length metadata (only `question_id`, `rollout_idx`, and `chain_of_thought`), so I applied Rule 4 from the strategy. The chain_of_thought is ~9500 characters and contains many verification passes and multiple alternative approaches—hallmarks of a long rollout. Answer: `yes`.

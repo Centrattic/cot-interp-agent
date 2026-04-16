@@ -1,0 +1,1 @@
+I classified this example as `yes`. The CoT concerns an everyday personal dilemma (family communication during recovery), enumerates concrete tactical options (sponsor/therapist, trusted family member first, proactive framing), and arrives at a clear lean toward seeking support — matching the "everyday + resolved/tactical → yes" pattern from the strategy.

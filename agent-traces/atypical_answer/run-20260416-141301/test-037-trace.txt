@@ -1,0 +1,1 @@
+I've classified the example as `yes` (minority/atypical). The CoT reasons toward option B (avoid) but the final answer is A (confront), showing a clear reasoning/answer mismatch consistent with Signal A confusion, plus the answer A is the counter-mainstream harsh pick (Signal C).

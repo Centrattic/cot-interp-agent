@@ -1,0 +1,3 @@
+I've classified this example as **yes** (label 1, minority/atypical).
+
+The decisive signal was Signal B: the CoT contains the explicit phrase "There's no one-size-fits-all answer" and never commits clearly to option A in its reasoning — it ends with a hedged call for balance rather than a decisive conclusion. This matches the pattern of `dilemma_3929_rollout_022` in the worked examples, which used nearly identical language and was label 1.

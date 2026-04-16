@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt. The reasoning: the example lacks z_score/token_length metadata, so Rule 4 applies. The chain-of-thought is ~22,700 characters (far > 6000) and features extensive backtracking ("Wait" appears 43 times, "let me think" 8 times) with multiple restart-from-scratch passes — classic long-rollout signature.

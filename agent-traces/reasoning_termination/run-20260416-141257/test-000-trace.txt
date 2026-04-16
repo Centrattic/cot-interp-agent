@@ -1,0 +1,1 @@
+Answer written: **yes** (label 1 — the model has stated its final answer "3" twice and ended on a clear conclusion, matching the wrap-up pattern in the strategy).

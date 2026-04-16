@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The example lacked length metadata, so I applied Rule 4 based on the ~7400-character chain-of-thought with multiple verification passes (multiple "Wait", "Let me", "check again" cues), which indicates an atypically long rollout.

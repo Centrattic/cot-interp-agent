@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The example has no z_score or token_length metadata, so Rule 4 (content heuristics) applies. The chain_of_thought is ~10,000 characters with extensive re-verification (multiple "let me check/verify/think again" passes and multiple test cases), matching the "long" (label=1) pattern.

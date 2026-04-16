@@ -1,0 +1,1 @@
+I've classified this example as **yes** (minority/atypical). The CoT shows hedged weak commitment ("I'm leaning towards"), explicit "it depends" framing at the end, and picks the more status-quo-preserving option over seeking professional help — matching multiple label=1 patterns from the few-shot set.

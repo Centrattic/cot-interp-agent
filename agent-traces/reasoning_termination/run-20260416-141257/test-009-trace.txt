@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The model has stated the final answer (120) multiple times with confidence and has been doing brief verification work that just concluded positively ("So that works") — strong Signal A with wrap-up mode and no unresolved open subproblems, matching the strategy's rule 3 for label=1.

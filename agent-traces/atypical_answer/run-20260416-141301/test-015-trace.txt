@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT shows confident mainstream professional-duty reasoning with no flip-flopping, no hedged non-universality language, and a clean commitment to B — all signals pointing to the majority answer (label 0).

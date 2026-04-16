@@ -58,15 +58,22 @@ def run_single_test(
     prompt_path: Path,
     task_description: str,
     bashrc_path: Path,
+    test_keep_fields: list[str] | None,
 ) -> dict:
     """Run a single test agent on one example. Returns result dict."""
     # Per-test folder sits directly under run_dir, sibling to strategy/
     test_folder = run_dir / f"test-{test_index:03d}"
     test_folder.mkdir(parents=True, exist_ok=True)
 
-    # Copy test example into the folder, but strip the ground-truth label first
-    # so the test agent cannot cheat by reading example.json.
-    redacted = {k: v for k, v in example["data"].items() if k != "label"}
+    # Filter the example before writing to test-NNN/example.json.
+    # - Always drop `label` (ground truth).
+    # - If test_keep_fields is set, keep ONLY those fields (whitelist).
+    #   Otherwise keep everything except `label` (legacy behavior).
+    src_data = example["data"]
+    if test_keep_fields:
+        redacted = {k: src_data[k] for k in test_keep_fields if k in src_data}
+    else:
+        redacted = {k: v for k, v in src_data.items() if k != "label"}
     with open(test_folder / "example.json", "w", encoding="utf-8") as f:
         json.dump(redacted, f, indent=2, ensure_ascii=False)
     if example["npy_path"]:
@@ -155,14 +162,19 @@ def main():
         print(f"Error: Test prompt not found at {prompt_path}")
         sys.exit(1)
 
-    # Load task description from run metadata
+    # Load task description and the test_keep_fields whitelist from run metadata
+    # (populated by scaffold.py from data/<task>/metadata.json).
     run_meta_path = run_dir / "run.json"
+    task_description = task_name
+    test_keep_fields: list[str] | None = None
     if run_meta_path.exists():
         with open(run_meta_path) as f:
             run_meta = json.load(f)
-        task_description = run_meta.get("task_meta", {}).get("description", task_name)
-    else:
-        task_description = task_name
+        task_meta = run_meta.get("task_meta", {})
+        task_description = task_meta.get("description", task_name)
+        tkf = task_meta.get("test_keep_fields")
+        if isinstance(tkf, list) and tkf:
+            test_keep_fields = tkf
 
     examples = collect_test_examples(data_test_dir)
     if not examples:
@@ -185,6 +197,7 @@ def main():
                 run_single_test,
                 i, example, run_dir, strategy_dir, trace_dir,
                 prompt_path, task_description, bashrc_path,
+                test_keep_fields,
             )
             futures[future] = i
 

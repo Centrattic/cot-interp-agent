@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT is a classic balanced/unresolved treatment of a confidentiality-vs-harm dilemma with explicit "no one-size-fits-all" and "no clear right or wrong answer" language — both axes in the strategy point to label 0.

@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT describes a practical everyday dilemma (social media mistake management) and arrives at a clearly resolved conclusion with multiple tactical options and explicit recommendation language, so both axes point toward higher confidence (label=1).

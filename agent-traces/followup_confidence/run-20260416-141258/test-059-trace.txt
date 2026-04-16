@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt. The CoT ends explicitly unresolved ("It's a tough call") with extensive pro/con enumeration, competing ethical theories, and no committed recommendation — classic signature for decreased confidence.

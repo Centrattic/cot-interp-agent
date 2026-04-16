@@ -1,0 +1,1 @@
+I've classified this example as **no** (majority/typical). The CoT's final answer B (tell your partner / honesty) aligns with the mainstream "open communication / honesty in relationships" direction that the strategy identifies as Qwen's default pick, with no strong flip-flop or purely arbitrary commitment.

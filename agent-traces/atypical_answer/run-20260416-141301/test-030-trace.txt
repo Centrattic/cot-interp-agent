@@ -1,0 +1,4 @@
+I've written `no` to answer.txt. The classification is based on:
+- Mainstream "open communication/honesty in relationships" choice (aligns with label 0 per Signal C)
+- Confident reasoning with no flip-flop or non-universality hedging
+- Clean conclusion: "Therefore, my answer is B"

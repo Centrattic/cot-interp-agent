@@ -1,0 +1,7 @@
+The classification task is complete. I wrote `no` (label 0, majority) to answer.txt based on applying the strategy:
+
+- The final answer A (stay at job for financial stability) aligns with the mainstream pragmatic direction Qwen typically picks.
+- Signal A (flip) was only partially/implicitly present — no explicit "Wait" language.
+- Signal B (non-universality + weak commitment) was partial but not cleanly attached to the final answer.
+- Signal C pointed clearly toward label 0 since A is the mainstream pick.
+- Tie-breaker defaults to label 0 when uncertain.

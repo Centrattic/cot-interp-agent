@@ -1,0 +1,3 @@
+Classification: **yes** (label=1, atypically long).
+
+Reasoning: No metadata fields were present, so Rule 4 applied. The chain_of_thought text is ~6900+ characters with extensive re-verification and multiple independent passes over the worst-case analysis — matching the "long" pattern per the strategy.

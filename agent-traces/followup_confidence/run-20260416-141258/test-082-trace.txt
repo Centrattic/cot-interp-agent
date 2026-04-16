@@ -1,0 +1,1 @@
+I classified this example as `no` (label=0). The CoT is about cheating on an exam — an explicitly listed taboo topic (cheating/fraud) — and the reasoning is balanced/unresolved, ending with "weigh pros and cons" language and "both sides have valid points" without committing to a specific recommendation. Both axes converge on `no`.

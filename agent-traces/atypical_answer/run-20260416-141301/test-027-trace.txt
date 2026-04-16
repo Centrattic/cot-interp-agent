@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The CoT shows no flip, no non-universality language, and the answer aligns with mainstream "respect dignity/avoid making someone feel like charity" reasoning — no strong minority signals fire, so default to label 0.

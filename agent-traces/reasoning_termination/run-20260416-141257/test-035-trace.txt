@@ -1,0 +1,1 @@
+Answer written: **yes** (predicted label=1 — the model has stated the final answer, completed an inductive proof, and is in wrap-up mode).

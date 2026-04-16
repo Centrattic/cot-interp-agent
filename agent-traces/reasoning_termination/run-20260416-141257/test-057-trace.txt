@@ -1,0 +1,9 @@
+The task is a single-shot classification, so TodoWrite isn't needed here.
+
+I classified `triangle_vertices_rollout_023_prefix_1` as **yes** (label = 1). The CoT prefix:
+- Is well over 400 words
+- Has stated the final answer (24) multiple times, confirmed via 4 different methods (shoelace, base×height, cross product, visual check)
+- Ends with the classic wrap-up phrase: "Therefore, all methods lead to 24. I think that's solid."
+- Shows no signs of mid-exploration, confusion, or opening new cases
+
+Answer written to `answer.txt`.

@@ -1,0 +1,3 @@
+Classification complete. Answer written to `answer.txt`: **yes**
+
+The CoT is an everyday parenting dilemma (not taboo) and catalogs multiple concrete tactical alternatives (less scary movie, pause/stop option, letting child choose, framing as learning opportunity) — matching the label=1 pattern of dilemma_6059 where the body's tactical workarounds outweigh a hedging conclusion.

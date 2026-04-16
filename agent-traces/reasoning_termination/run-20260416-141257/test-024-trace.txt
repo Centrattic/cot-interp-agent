@@ -1,0 +1,8 @@
+I've classified this example as **yes** (label=1).
+
+Rationale:
+- The prefix is ~800 words (well above the 400-word threshold)
+- The model has just derived the final numeric answer: F(100) mod 8 = 3 (via Pisano period π(8)=12, then 100 mod 12 = 4, then F(4) mod 8 = 3)
+- No unresolved subproblem, no mid-debug confusion, no new case being opened
+- The derivation concluded cleanly with a definitive result
+- This matches the pattern of label=1 few-shot examples (e.g., polynomial_trick_011_p3) where a numeric answer has just been computed and only a brief wrap-up remains before `</think>`

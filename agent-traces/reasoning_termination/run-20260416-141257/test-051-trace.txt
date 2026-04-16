@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1). The model has just computed the final answer (54 diagonals) for the 12-sided polygon, completing the calculation cleanly with no open subproblems. This is a strong Signal A (final numeric answer stated) with the prefix in wrap-up mode, matching the strategy's rule 3.

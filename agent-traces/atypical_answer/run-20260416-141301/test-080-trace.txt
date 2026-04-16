@@ -1,0 +1,1 @@
+I've classified the example as `no` (majority/typical answer). The CoT shows confident, mainstream reasoning aligned with expert consensus on non-physical discipline, with a decisive conclusion — no flip-flops, no "it depends" hedging, and the answer matches the typical humane/mainstream position.

@@ -1,0 +1,1 @@
+I've written the answer. The classification is `yes` (atypically long) based on Rule 4 content heuristics: the chain_of_thought is ~14,500 characters with multiple independent verification approaches (Burnside's Lemma, distance enumeration, formula application, explicit listing) and numerous re-check phrases.

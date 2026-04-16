@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT's answer B (tell parents) aligns with the mainstream "open communication/honesty" direction, shows confident linear reasoning without flip-flops, and commits firmly to the conclusion — all pointing to label 0 (majority).

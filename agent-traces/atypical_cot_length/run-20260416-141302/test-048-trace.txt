@@ -1,0 +1,1 @@
+Wrote `yes` to `answer.txt` — classification based on Rule 4 (content heuristics) since no length metadata was present. The rollout exhibits heavy verification density (double enumeration of all 22 squares, multiple independent solution approaches, and many explicit double-check passes), pointing to atypically long.

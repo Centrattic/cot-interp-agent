@@ -1,0 +1,1 @@
+Answer written: **yes** (applying Rule 4: long rollout with heavy re-verification).

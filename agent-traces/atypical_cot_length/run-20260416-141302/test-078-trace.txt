@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt — the 17,650-char rollout shows extensive verification, backtracking, and multiple restarts, matching Rule 4's long-rollout profile.

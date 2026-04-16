@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT shows hedged commitment ("might be A", "in most cases") and lands on the status-quo-preserving answer, both of which are strong signals for the minority/atypical label per the strategy.

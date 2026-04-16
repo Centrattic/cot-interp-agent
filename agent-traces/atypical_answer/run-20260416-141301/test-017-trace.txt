@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT shows no flip-flops, no strong hedging language, a confident conclusion, and a mainstream-aligned choice (respecting patient autonomy with supportive framing), so it leans toward the majority answer.

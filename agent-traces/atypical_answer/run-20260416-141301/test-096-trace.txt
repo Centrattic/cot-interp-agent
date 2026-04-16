@@ -1,0 +1,5 @@
+I've written `no` (majority/label=0) to answer.txt based on:
+- No flip-flop or confusion
+- No explicit non-universality hedge
+- The picked answer (follow shelter policy) is framed pragmatically, aligning with Qwen's typical mainstream-pragmatic reasoning mode
+- Reasonably confident final commitment

@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The rollout's extensive multi-method verification (4+ independent approaches to a simple tank-fill problem) matches the Rule 4 signal for atypically long chains of thought.

@@ -1,0 +1,1 @@
+The example has an empty `cot_text`, making it impossible to score on either axis of the strategy (Topic type or Reasoning style). Following the strategy's explicit tiebreaker rule for genuinely ambiguous cases — "default to `yes`" — I wrote `yes` to `answer.txt`.

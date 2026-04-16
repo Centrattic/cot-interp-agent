@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt` based on Rule 4 — the rollout shows high verification density (4+ independent methods for a simple problem, repeated re-checks), indicating an atypically long chain-of-thought.

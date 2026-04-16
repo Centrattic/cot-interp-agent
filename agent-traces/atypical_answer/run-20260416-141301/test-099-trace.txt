@@ -1,0 +1,3 @@
+I've written `yes` to answer.txt based on:
+- **Signal B fires strongly**: "complex issue without a clear right or wrong answer" and "It depends on the specific circumstances..." combined with hedged "I think the more ethically responsible choice would be..." commitment.
+- **Signal C likely fires**: Picking B (refuse to listen on principle) over A (separate art from artist, pragmatic) tends to be the more over-principled counter-mainstream pick.

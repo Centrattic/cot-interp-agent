@@ -1,0 +1,1 @@
+I classified this example as `no` (majority/label=0). The CoT chose the professional-duty answer (B, fulfill the order) — which the strategy explicitly lists as a mainstream direction Qwen gravitates toward. There's no A/B flip, no strong "no one-size-fits-all" hedging, and the reasoning settles confidently on professional boundaries over personal feelings.

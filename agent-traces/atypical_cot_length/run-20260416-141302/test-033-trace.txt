@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1, atypically long rollout based on Rule 4 content heuristics — long CoT with multiple verification approaches).

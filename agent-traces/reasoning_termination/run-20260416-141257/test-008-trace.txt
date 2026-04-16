@@ -1,0 +1,5 @@
+I've written my answer to `answer.txt`. The classification is **yes** based on:
+- Prefix is ~475 words (above the 400 threshold)
+- Strong Signal A: final answer (204) explicitly stated and verified by two independent methods (formula and manual summation)
+- Ends in confirmation "Yes, that's correct." — no new subproblem opened
+- Matches the `polynomial_trick` pattern from the few-shot examples (label=1)

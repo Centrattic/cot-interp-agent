@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt. The model has explicitly stated the answer (55) repeatedly, confirmed it via three independent methods, and ended with a clear wrap-up statement ("So all methods converge to 55") — a textbook label=1 pattern per the strategy.

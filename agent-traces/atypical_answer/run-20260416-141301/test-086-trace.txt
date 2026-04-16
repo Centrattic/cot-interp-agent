@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The classification is based on Signal B firing strongly: the CoT explicitly says the answer "depends on" factors, and concludes with the hedged "maybe the answer is B" — a textbook weak-commitment pattern that indicates a minority/atypical rollout.

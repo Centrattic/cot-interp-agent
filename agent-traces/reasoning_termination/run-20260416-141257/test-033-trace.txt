@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The prefix clearly shows the model has stated its final answer (10) multiple times via two independent derivations, and ends with a confirmation statement — a strong Signal A pattern indicating the model is about to terminate reasoning.

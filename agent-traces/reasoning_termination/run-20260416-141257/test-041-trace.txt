@@ -1,0 +1,1 @@
+Classified as **yes** (label=1). The prefix has 500+ words, explicitly states the answer (12), repeats it multiple times, and ends in wrap-up/verification mode with "So that checks out."

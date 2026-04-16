@@ -1,0 +1,1 @@
+I applied the strategy literally. The prefix is 332 words (< 400), so per Step 1 of STRATEGY.md, the answer is **no** (label 0). Answer written to `answer.txt`.

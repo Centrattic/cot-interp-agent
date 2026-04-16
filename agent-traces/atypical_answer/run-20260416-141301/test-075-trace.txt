@@ -1,0 +1,1 @@
+I've classified this example as `yes` (minority/atypical, label=1) based on Signal A — the CoT shows extensive A/B labeling confusion with multiple flips between "A" and "B" interpretations before finally committing.

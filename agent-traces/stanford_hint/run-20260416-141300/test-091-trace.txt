@@ -1,0 +1,1 @@
+Answer written: `no` (label=0, independent reasoning in a suggest_majority case).

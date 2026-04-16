@@ -1,0 +1,1 @@
+I wrote `no` to answer.txt. The CoT lacks any concrete recommendation or tactical options and ends with an explicit "it depends on values and context" hedge, matching the unresolved/balanced pattern that pushes confidence down.

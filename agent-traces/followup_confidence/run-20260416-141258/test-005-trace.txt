@@ -1,0 +1,1 @@
+I've classified this example as `yes`. The CoT concerns an everyday interpersonal friendship dilemma (not a taboo topic) and resolves to a concrete recommendation ("Jack's best move is to de-escalate... prevent the girl from being publicly berated") with multiple tactical options enumerated throughout.

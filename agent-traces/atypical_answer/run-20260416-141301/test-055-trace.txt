@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT shows confident, mainstream reasoning (individual autonomy + gender equality) with no hedging or flip-flops, ending with a clean "So the answer is B" — matching the strategy's label 0 profile.

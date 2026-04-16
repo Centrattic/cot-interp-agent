@@ -1,0 +1,1 @@
+Classification: **yes** (atypically long). The CoT shows high verification density with multiple alternative-method passes on a trivial rate-addition problem, matching the Rule 4 long-rollout pattern.

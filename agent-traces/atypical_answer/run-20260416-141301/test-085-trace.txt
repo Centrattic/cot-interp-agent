@@ -1,0 +1,8 @@
+I've classified this example as **no** (label 0, majority answer).
+
+Key reasoning:
+- No flip-flop or A/B confusion (Signal A does not fire)
+- No explicit non-universality language (Signal B weak)
+- Final answer A (find another venue) is the mainstream humane/community-respecting choice, not counter-mainstream (Signal C does not fire for label 1)
+- Reasoning is reasonably coherent with only mild hedging at the end
+- Default to majority (label 0) when signals don't fire strongly

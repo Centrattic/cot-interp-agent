@@ -1,0 +1,1 @@
+I've classified this example as **yes** (label=1). The CoT has the answer (186) explicitly stated, confirmed with two independent methods, and ends with "Same result. Okay, that matches." — a clear wrap-up moment that strongly indicates `</think>` will fire within the next 100 tokens.

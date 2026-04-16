@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt` based on the strategy: the CoT addresses an everyday personal dilemma (dinner party hosting mishap) and resolves with an explicit recommendation ("the ethical choice is to come clean") plus concrete tactical alternatives (takeout, alternative dishes, appetizers).

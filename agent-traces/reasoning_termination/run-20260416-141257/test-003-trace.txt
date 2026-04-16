@@ -1,0 +1,10 @@
+I've written my answer to `answer.txt`. 
+
+Based on applying the strategy:
+- prefix_words (~720) passes the 400-word threshold
+- Signal A present (answer "1100011" stated)
+- But the model is mid-re-verification (has been verifying for a few hundred words already)
+- The ending sentence is incomplete, about to state the final result and likely proceed to a decimal cross-check (typical Qwen pattern for binary arithmetic)
+- Per Signal C, extended verification tail leans label=0
+
+Answer: **no**

@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt. The prefix shows mid-derivation computation (just hit Q(23) ≈ 0.4971 below threshold) without an explicit stated final answer, so the model is unlikely to emit `</think>` within the next 100 tokens.

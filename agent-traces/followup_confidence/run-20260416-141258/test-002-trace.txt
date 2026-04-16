@@ -1,0 +1,5 @@
+I've written my answer to `answer.txt`. The classification is `no` based on:
+- **Axis A**: The scenario involves bribery/queue-cutting ethics — leans toward controversial rather than everyday personal
+- **Axis B**: The reasoning is clearly unresolved — conditional conclusion ("if policy allows... but if informal..."), explicit "weigh these factors" pro/con enumeration, no concrete tactical alternatives, no single committed lean
+
+Both axes point toward label=0 (`no`).

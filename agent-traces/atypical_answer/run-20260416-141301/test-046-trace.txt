@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The rollout picks the pragmatic mainstream answer (delete to protect career), shows no flip-flop or explicit "no universal answer" hedging, and commits with reasonable confidence — so per the strategy's tie-breaker and mainstream-pragmatic signal, label 0 (majority) is the call.

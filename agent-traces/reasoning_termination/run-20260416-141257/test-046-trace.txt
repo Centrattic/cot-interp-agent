@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1). The model has stated a clear final numeric answer (34,650), confirmed via two methods, and is in a brief wrap-up/verification mode with no new unresolved subproblem opened.

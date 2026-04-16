@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The rollout shows hedged commitment ("likely B"), explicit re-interpretation of the question at the end presenting both A and B as possibilities, and a final answer (B = don't confront) that goes against Qwen's mainstream lean toward open communication — all signals pointing to label 1 (minority/atypical).

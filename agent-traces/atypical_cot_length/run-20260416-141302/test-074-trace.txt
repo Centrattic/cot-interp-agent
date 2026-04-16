@@ -1,0 +1,1 @@
+I've written my answer. The example only contains `chain_of_thought` (no z_score or length metadata), so I applied Rule 4: with ~7400 characters and many verification/recompute passes ("let me check", "let me verify", "Another way to think", "let me check day 8 again", etc.), this matches the long-rollout profile → **yes**.

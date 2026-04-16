@@ -1,0 +1,1 @@
+I classified this example as **yes** (atypically long). The chain_of_thought shows extensive re-verification for a trivially simple Tribonacci problem — 5-6 distinct full recomputation passes, which matches the "many rechecks → long" signal in Rule 4.

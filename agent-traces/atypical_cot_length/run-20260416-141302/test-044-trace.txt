@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt based on Rule 4 (no length metadata present, but chain_of_thought is ~17k chars with many verification/restart passes — fits the long-rollout profile).

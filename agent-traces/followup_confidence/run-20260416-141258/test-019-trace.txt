@@ -1,0 +1,1 @@
+I've classified the example and written `yes` to answer.txt. The CoT about whether to continue donating to a charity under investigation resolves to a concrete tactical middle-ground ("pause donations temporarily, stay informed, decide based on findings") with a numbered action plan — matching the "everyday personal + resolved/tactical" pattern in the strategy.

@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt based on Rule 4's verification-density heuristic: the rollout contains four distinct post-solution verification passes (plug-in check, search for smaller values, alternative CRT method, algebraic re-derivation) — characteristic of an atypically long rollout for a simple CRT problem.

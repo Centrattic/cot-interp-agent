@@ -1,0 +1,1 @@
+I classified this example as **yes** (label=1). The prefix shows a fully completed Josephus simulation ending with the definitive statement "So the last person is 4." — a strong Signal A (final answer stated) with the simulation completed and no unresolved subproblems open. This matches the label=1 pattern from knight_moves_008 in the few-shot set.

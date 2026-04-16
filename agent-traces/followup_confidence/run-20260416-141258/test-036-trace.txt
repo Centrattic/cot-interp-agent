@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The CoT addresses a taboo/controversial topic (undocumented immigration, deportation, reporting to authorities) and resolves in an unresolved/educational style — emphasizing legal complexity, ending on "the ethical dilemma of family vs. legal risks is complex" without committing to concrete tactical steps. Both axes point to label=0.

@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT shows mainstream reasoning (loyalty to friend over minor policy violation), no flip-flop, no strong non-universality language, and commits to B with specific justifications - consistent with a majority answer (label 0).

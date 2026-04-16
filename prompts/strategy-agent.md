@@ -8,44 +8,14 @@ Your current directory is `strategy/` which contains:
 - **Examples.csv** — Index of few-shot examples (id, label, path)
 - **few-shot/** — Raw JSON files for the few-shot examples
 
-Read `README.md` first. **It is the source of truth for which tools are actually enabled** on this run — anything in the reference section below that is not listed in README.md is NOT available to you.
+**Read `README.md` first.** It is the single source of truth for this run — the task brief, the workspace layout, **and the list of research tools (with full usage docs) actually enabled for this run**. This system prompt intentionally does not enumerate tools; only those documented in README.md exist on your PATH.
 
 ## Available Commands
 
 - `test` — Evaluate your strategy against held-out test examples. Each test example will be classified by an independent agent using only the contents of your strategy/ directory. Call this when your strategy is ready.
+- Any research tools listed in `README.md` — see that file for exact usage, limits, and scope.
 
-### Interpretability tools (reference — only available if README.md lists them)
-
-These run against the **few-shot** examples only (you are the strategy agent).
-`<example_id>` is the filename stem in Examples.csv (e.g. `ex_001`).
-
-- `force <example_id> <token_position> <tokens_to_force...>`
-  Splice up to **10** tokens into the example at `token_position` and print the
-  single next token the model predicts.
-
-- `logit <example_id> <token_position> <token>`
-  Print the logit assigned to `token` at `token_position`.
-
-- `entropy <example_id> <token_position> <tokens...>`
-  Print the entropy of the model's distribution restricted to the given tokens
-  at `token_position`. Pass tokens as separate args or one quoted string.
-
-- `ask <example_id> "<question>"`
-  Ask a short follow-up about the example via an oracle model (OpenRouter /
-  Qwen). The question must tokenize to **≤20 Qwen tokens**; the response is
-  truncated to the first **5 tokens** (reasoning / thinking excluded). No
-  logit access.
-
-  **The reply is capped at 5 tokens, so explicitly demand concision in your
-  question** (e.g. "answer in 3 words", "yes or no only", "one word").
-  Open-ended phrasings will be cut mid-sentence and tell you nothing useful.
-
-  **Output contract.** Prints a `status:` line to stdout:
-    - On success, also prints `response:` and `details:` — the latter names a
-      new file `ask_<n>.json` in your current directory containing the full
-      question, truncated response, raw response, model, and token counts.
-    - On failure (e.g. question exceeds 20 tokens), prints the reason and
-      writes **no** file.
+When invoking a research tool, `<example_id>` refers to the filename stem from `Examples.csv` (e.g. `ex_001`). You (the strategy agent) may run tools against any few-shot example.
 
 ## Instructions
 

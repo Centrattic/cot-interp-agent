@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The prefix clearly states the final answer (GCD = 8) multiple times, verifies it with two different methods, and closes with a confident "I think that's solid" — a textbook wrap-up mode matching the strategy's Signal A with a short verification tail.

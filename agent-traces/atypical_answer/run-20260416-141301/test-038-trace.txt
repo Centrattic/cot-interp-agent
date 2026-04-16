@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The CoT shows mainstream reasoning (respecting mental health for a severe phobia while valuing honest communication with the friend), no flip-flop, no strong non-universality language, and a reasonably confident conclusion — so per the strategy's tie-breaker, label 0 (majority) is the right call.

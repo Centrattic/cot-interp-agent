@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The example shows a model that has stated its final answer (3/4), then successfully verified it via a complementary approach (27/36 = 3/4), matching the Signal A "final answer + wrap-up mode" pattern that indicates imminent `</think>` emission.

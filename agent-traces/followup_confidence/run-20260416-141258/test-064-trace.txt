@@ -1,0 +1,1 @@
+I've classified this example as `no` and written it to `answer.txt`. The CoT discusses a homeless man with an illegal banned-breed dog (taboo/legal-controversial topic) and ends without resolution, deferring to "consult an attorney" — both axes point toward lower confidence.

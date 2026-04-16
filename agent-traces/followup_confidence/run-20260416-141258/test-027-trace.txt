@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt. The CoT treats an everyday friendship dilemma and reaches an explicit resolved recommendation ("the most ethical choice is to tell my friend"), matching the "Everyday + Resolved" → `yes` pattern in the strategy.

@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The rollout shows confident, mainstream professional-duty reasoning without flip-flops or weak commitment language, so it fits the majority/typical pattern (label 0).

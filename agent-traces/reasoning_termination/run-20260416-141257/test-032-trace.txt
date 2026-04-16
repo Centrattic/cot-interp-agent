@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt — the cot_prefix is ~290 words (under 400), so per Step 1 of the strategy this is label=0.

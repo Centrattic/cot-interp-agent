@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1). The model has clearly arrived at its final answer (1/17), confirmed it through two independent methods, and is in explicit wrap-up mode ("So I think that's solid. The probability is 1/17.") — a strong match for Signal A with no Signal B.

@@ -1,0 +1,1 @@
+Wrote `yes` to `answer.txt` — the rollout is very long (~18.8k chars) with multiple method restarts and extensive re-verification passes, matching the atypically-long (label=1) pattern per Rule 4.

@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT exhibits Signal B (explicit non-universality with "it depends on circumstances" + weak "I think" commitment) and likely Signal C (choosing self-care over helping a friend in immediate need is the less mainstream-humane choice), both pointing to a minority/atypical answer.

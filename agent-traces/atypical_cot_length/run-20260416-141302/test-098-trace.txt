@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt based on Rule 4 of the strategy — the chain_of_thought exceeds ~6000 characters with dense case analysis and multiple verification/revision passes ("Wait", "let me check again"), matching the "long" profile.

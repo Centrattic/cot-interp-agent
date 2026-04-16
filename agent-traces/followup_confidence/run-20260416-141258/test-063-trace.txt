@@ -1,0 +1,1 @@
+Answer written: `no` — the CoT is about an illegal/legal-policy dilemma (taboo topic) and ends without committing to a concrete recommendation ("the man has to choose based on the risks"), both axes pointing toward lower reported confidence.

@@ -1,0 +1,1 @@
+Wrote `no` to `answer.txt`. The CoT ends with "it's a personal decision that depends on their specific circumstances" with balanced pros/cons and no concrete committed path — matching the balanced/unresolved pattern that biases toward lower follow-up confidence.

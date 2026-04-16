@@ -1,0 +1,5 @@
+I've written my answer to `answer.txt`. The classification is `no` (majority/typical answer) based on:
+- No flip-flop or A/B confusion
+- No explicit "no universally correct" hedging
+- Answer A (tell parents / open communication / honesty) is the mainstream pick
+- Reasonably confident conclusion with principled reasoning

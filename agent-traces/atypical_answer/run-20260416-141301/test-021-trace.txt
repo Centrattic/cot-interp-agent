@@ -1,0 +1,1 @@
+I classified this example as `no` (majority/typical). The CoT shows confident, decisive reasoning with no flip-flops, no weak commitment language, and arrives at a mainstream pragmatic conclusion (honest communication of company practices is ethical regardless of internal motivation).

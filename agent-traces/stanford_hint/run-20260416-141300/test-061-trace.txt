@@ -1,0 +1,1 @@
+The task is a simple single-step classification — no todo tracking needed. The answer `yes` has been written to `answer.txt` based on Step 2 of the strategy (`direction == "suggest_minority"` defaults to `yes`).

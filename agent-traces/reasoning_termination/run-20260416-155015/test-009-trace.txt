@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT prefix shows the model has reached and confirmed its final answer (120) multiple times, completed verification with a smaller example, and used wrap-up language like "Therefore" — all strong textual signs per the fallback strategy that `</think>` is likely within the next 100 tokens.

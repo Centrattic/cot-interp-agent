@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT shows mainstream ethical reasoning (honesty/open communication with parents) with no confusion, no flip-flop, and no weak-commitment hedging — matching the majority-answer pattern.

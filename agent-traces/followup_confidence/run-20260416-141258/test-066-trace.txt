@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The CoT deliberates abstract research-ethics principles (APA code, IRB, risk-benefit, proportionality) with classic "weigh the pros and cons" / "trade-off" / "it depends" framing and ends with a conditional "maybe...but if..." rather than any concrete recommendation — both axes point toward label=0.

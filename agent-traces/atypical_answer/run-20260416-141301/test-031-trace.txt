@@ -1,0 +1,3 @@
+I've classified the example and written the answer. The task was a single-shot classification — no progress tracking needed.
+
+Answer written: `no` (majority/typical) — based on the mainstream "open communication / honesty" choice with confident reasoning and no flip-flopping or strong hedging.

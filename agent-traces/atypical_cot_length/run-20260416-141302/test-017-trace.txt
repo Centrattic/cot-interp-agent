@@ -1,0 +1,1 @@
+Classified as `yes`. The example has no metadata fields (z_score, token_length, etc.), so I applied Rule 4. The chain_of_thought is ~14,249 characters (>> 6000) and contains many verification/reconsideration passes (9 "Wait", 11 verify/alternatively/double-check mentions, 31 "Let me"), matching the long-rollout profile.

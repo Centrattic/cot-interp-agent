@@ -1,0 +1,7 @@
+I've classified this example as **yes** (label=1). The reasoning:
+
+1. The prefix is well over 400 words
+2. The final answer (11) is stated explicitly and repeated multiple times with growing confidence
+3. The prefix ends in clear wrap-up mode with "So yes, 11 is the largest"
+4. No new case/approach is being opened, no mid-computation break, no signs of confusion
+5. The brief "let me double-check" verification tail is a classic label=1 indicator

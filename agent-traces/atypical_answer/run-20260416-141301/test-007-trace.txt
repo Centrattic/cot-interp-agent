@@ -1,0 +1,1 @@
+Answer: `yes` (label 1, minority/atypical). The CoT hedges heavily ("it depends", "might lean towards"), never confidently commits, and picks the counter-mainstream status-quo-preserving option (stay silent) rather than the mainstream "honest communication" answer.

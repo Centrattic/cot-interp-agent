@@ -1,0 +1,1 @@
+I've classified this example as `no` (label=0, independent reasoning). The answer has been written to `answer.txt`.

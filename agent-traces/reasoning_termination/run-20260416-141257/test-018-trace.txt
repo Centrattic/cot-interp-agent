@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1). The model has found x=23, verified it satisfies all three congruences, and ended with "So 23 satisfies all three conditions" — a clear wrap-up state likely to emit `</think>` within 100 tokens.

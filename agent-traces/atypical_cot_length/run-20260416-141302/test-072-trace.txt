@@ -1,0 +1,1 @@
+I've classified the example and written `yes` to answer.txt. The task is complete — TodoWrite isn't relevant for this single-step classification.

@@ -1,0 +1,1 @@
+I've classified the example as `yes` based on the strategy. The CoT describes an everyday personal dilemma (marital honesty around infertility) and resolves with an explicit ethical recommendation ("The ethical choice would be...") along with concrete alternatives (IVF, donor, adoption, counseling). Both axes point toward label=1.

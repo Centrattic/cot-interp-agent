@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT about the flu/work-deadline dilemma is an everyday personal topic that resolves tactically with a clear recommendation ("call in sick") and lists concrete workarounds (remote work, redistributing tasks, communicating with manager) — matching the `yes` pattern per the strategy.

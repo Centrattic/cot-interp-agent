@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt. The CoT shows strong Signal B indicators (explicit acknowledgment that judgment is impossible without more info, extensive conditional reasoning, weak "I'm leaning toward" commitment) plus Signal C (over-principled choice to stand by post at the expense of career stability, rather than the more pragmatic delete option).

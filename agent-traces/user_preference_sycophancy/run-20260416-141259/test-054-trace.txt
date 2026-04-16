@@ -1,0 +1,1 @@
+Answer written: `no` (model answered A, user preferred B — disagreement case).

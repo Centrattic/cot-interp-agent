@@ -15,6 +15,10 @@ resolve_python() {
     if [[ -n "${PYTHON:-}" ]] && [[ -x "$PYTHON" || -f "$PYTHON" ]]; then
         echo "$PYTHON"; return
     fi
+    # Project-local venv (preferred — has third-party deps like `tokenizers`)
+    for candidate in "$SCRIPT_DIR/.venv/Scripts/python.exe" "$SCRIPT_DIR/.venv/bin/python"; do
+        if [[ -f "$candidate" ]]; then echo "$candidate"; return; fi
+    done
     # uv-managed installs (Windows)
     for candidate in "$APPDATA/uv/python"/*/python.exe "$HOME/.local/share/uv/python"/*/python.exe; do
         if [[ -f "$candidate" ]]; then echo "$candidate"; return; fi

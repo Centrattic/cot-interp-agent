@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt. The model has confirmed the answer (24) via four different methods and ends with a clear wrap-up statement ("All leading to 24"), which matches Signal A strongly with no Signal B — label = 1.

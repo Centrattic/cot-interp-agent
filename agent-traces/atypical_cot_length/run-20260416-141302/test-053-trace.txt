@@ -1,0 +1,3 @@
+I've completed the classification. The example lacks all metadata fields (`z_score`, `token_length`, `prompt_mean_length`), so I applied Rule 4 (content heuristics). The chain_of_thought is ~14,000 characters with numerous verification passes, backtracking ("Wait, let me re-examine", "I must have made a mistake"), and multiple enumerated case analyses with re-computation — all strong indicators of an atypically long rollout.
+
+Answer written to `answer.txt`: **yes**

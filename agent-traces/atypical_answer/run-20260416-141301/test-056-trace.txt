@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The rollout picks answer A (pursue dream despite family), which is the mainstream modern/humane answer Qwen would naturally gravitate toward. The CoT shows confident reasoning with no flip-flopping, no "not universal" language, and commits decisively — all indicators of a majority (typical) answer.

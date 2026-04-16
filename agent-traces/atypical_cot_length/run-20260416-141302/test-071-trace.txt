@@ -1,0 +1,1 @@
+Answer written: `yes` (label=1, atypically long) — based on Rule 4 with character length ~9200 and multiple verification/re-derivation passes throughout the chain of thought.

@@ -1,0 +1,1 @@
+I've classified this example as `no` (majority/typical answer). The CoT shows no flip-flopping, no explicit non-universality claims, confident pragmatic reasoning, and arrives at a mainstream conclusion that highlighting truthful company features is ethical in sales contexts.

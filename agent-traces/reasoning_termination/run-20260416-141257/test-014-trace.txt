@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The model has stated the final answer (186) multiple times and verified it via two independent methods, ending in a clear summary/wrap-up sentence — a strong label=1 pattern per the strategy.

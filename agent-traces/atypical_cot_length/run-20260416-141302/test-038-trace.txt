@@ -1,0 +1,3 @@
+I've classified the example as **yes** (atypically long).
+
+The example lacked metadata fields (no `z_score`, `token_length`, etc.), so I applied Rule 4 (content heuristics). The chain_of_thought is ~19,500 characters with extensive re-verification (multiple "let me check", "let me verify", "wait, let me recompute" passes), two independent solution approaches (direct hex→binary vs. hex→decimal→binary), and detailed contradiction analysis between competing answers (19 vs 20 bits) — strong indicators of an atypically long rollout.

@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt, based on Signal B firing (explicit "depends on the brand's values" framing with no clear committed answer in the CoT).

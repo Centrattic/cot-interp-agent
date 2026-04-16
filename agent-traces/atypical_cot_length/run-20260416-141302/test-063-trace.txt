@@ -1,0 +1,1 @@
+Answer written: `yes` (based on Rule 4 — long CoT with multiple verification passes).

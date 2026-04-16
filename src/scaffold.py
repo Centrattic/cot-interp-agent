@@ -73,10 +73,17 @@ def load_task_metadata(task_name: str) -> dict:
     return {"name": task_name, "description": f"Classification task: {task_name}"}
 
 
-def populate_few_shot(task_name: str, strategy_dir: Path) -> list[dict]:
-    """Copy raw few-shot JSONs into strategy/few-shot/ and write an index CSV.
+def populate_few_shot(
+    task_name: str,
+    strategy_dir: Path,
+    test_keep_fields: list[str] | None = None,
+) -> list[dict]:
+    """Write few-shot JSONs into strategy/few-shot/ using the SAME whitelist
+    the test agent sees, plus the `label` field (which the strategy agent needs
+    as ground truth). This prevents the strategy agent from building strategies
+    that rely on fields the test agent won't have.
 
-    Returns a list of {id, label} entries.
+    Returns a list of {id, label, path} entries (used for Examples.csv).
     """
     src_dir = DATA_DIR / task_name / "few-shot"
     dst_dir = strategy_dir / "few-shot"
@@ -89,15 +96,23 @@ def populate_few_shot(task_name: str, strategy_dir: Path) -> list[dict]:
         return index
 
     for json_file in sorted(src_dir.glob("*.json")):
-        shutil.copy2(json_file, dst_dir / json_file.name)
         with open(json_file, encoding="utf-8") as f:
             data = json.load(f)
+        if test_keep_fields:
+            # Keep only the fields the test agent will see, plus `label`.
+            filtered = {k: data[k] for k in test_keep_fields if k in data}
+            if "label" in data:
+                filtered["label"] = data["label"]
+        else:
+            filtered = data
+        with open(dst_dir / json_file.name, "w", encoding="utf-8") as f:
+            json.dump(filtered, f, indent=2, ensure_ascii=False)
         index.append({
             "id": json_file.stem,
             "label": data.get("label", ""),
             "path": f"few-shot/{json_file.name}",
         })
-        # Copy companion .npy if present
+        # Copy companion .npy if present (kept for all agents regardless of whitelist)
         npy = src_dir / f"{json_file.stem}.npy"
         if npy.exists():
             shutil.copy2(npy, dst_dir / npy.name)
@@ -107,23 +122,33 @@ def populate_few_shot(task_name: str, strategy_dir: Path) -> list[dict]:
         writer.writeheader()
         writer.writerows(index)
 
-    print(f"Copied {len(index)} few-shot examples into {dst_dir}")
+    wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
+    print(f"Wrote {len(index)} few-shot examples into {dst_dir}{wl}")
     return index
 
 
 TOOL_DESCRIPTIONS = {
-    # Populate as custom tools are added. Key = tool name, value = one-line description.
-    "ask": (
-        "`ask <example_id> \"<question>\"` — ask a short follow-up about an "
-        "example via an oracle (OpenRouter / Qwen3-32B via DeepInfra). "
-        "Question must be **≤20 Qwen tokens**; only the first **5 tokens** "
-        "of the reply come back (reasoning excluded). "
-        "**Because the reply is so short, phrase the question to demand a "
-        "very concise answer** (e.g. 'answer in 3 words', 'yes or no only', "
-        "'one word'); open-ended phrasings get cut mid-sentence. "
-        "On success, writes `ask_<n>.json` into your cwd with the full "
-        "question, truncated response, raw response, model, and token counts."
-    ),
+    # Key = tool name. Value = multi-line markdown blurb rendered into strategy/README.md
+    # under "## Research Tools". Both the strategy agent and the test agent read that
+    # README, so each blurb should cover both scopes (what each agent may query).
+    "ask": """### `ask <example_id> "<question>"`
+
+Ask a short follow-up question about an example via an oracle model
+(OpenRouter / Qwen3-32B, pinned to DeepInfra for reproducibility).
+
+**Limits**
+- Question must tokenize to **≤20 Qwen tokens** (else the call fails and no file is written).
+- The reply is truncated to the **first 5 tokens** (reasoning / thinking excluded). Because the reply is so short, **phrase the question to demand a very concise answer** (e.g. "answer in 3 words", "yes or no only", "one word"). Open-ended phrasings get cut mid-sentence.
+- No logit access.
+
+**Scope**
+- **Strategy agent:** may query any few-shot `<example_id>` (filename stem in `Examples.csv`).
+- **Test agent:** may only query its own assigned example — `AGENT_EXAMPLE_ID` names it; other IDs are rejected.
+
+**Output contract.** Prints a `status:` line to stdout:
+- On success, also prints `response:` and `details:` — the latter names a new file `ask_<n>.json` in your current directory with the full question, truncated response, raw response, model, and token counts.
+- On failure (token limit exceeded, wrong example id, etc.), prints the reason and writes **no** file.
+""".strip(),
 }
 
 
@@ -133,10 +158,14 @@ def render_tools_section(tools: list[str]) -> str:
             "This run has **no custom research tools enabled**. "
             "You have standard file I/O (Read, Write, Edit, Bash, Glob, Grep) only."
         )
-    lines = ["The following custom research tools are available on your PATH:\n"]
+    lines = [
+        "The following custom research tools are available on your PATH. "
+        "(The system prompt does not enumerate tools — this section is authoritative.)\n"
+    ]
     for name in tools:
-        desc = TOOL_DESCRIPTIONS.get(name, "(no description)")
-        lines.append(f"- `{name}` — {desc}")
+        desc = TOOL_DESCRIPTIONS.get(name, f"`{name}` — (no description available)")
+        lines.append(desc)
+        lines.append("")  # blank line between tool blurbs
     return "\n".join(lines)
 
 
@@ -201,8 +230,12 @@ def create_run(task_name: str, description: str | None = None, tools: list[str] 
     if description:
         task_meta["description"] = description
 
-    # Populate few-shot workspace (copies raw JSONs into strategy/few-shot/)
-    examples_index = populate_few_shot(task_name, strategy_dir)
+    # Populate few-shot workspace. The strategy agent sees the SAME field
+    # whitelist the test agent sees, so it can't learn features that get
+    # stripped at test time. `label` is additionally kept for ground truth.
+    examples_index = populate_few_shot(
+        task_name, strategy_dir, test_keep_fields=task_meta.get("test_keep_fields"),
+    )
 
     # Generate task-and-toolset-specific README
     generate_readme(task_meta, tools, examples_index, run_dir)

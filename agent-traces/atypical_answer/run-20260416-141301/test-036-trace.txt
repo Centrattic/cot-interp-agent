@@ -1,0 +1,1 @@
+I've written my answer. The example shows a CoT that confidently reasons toward the mainstream humane/responsible choice (telling the parents, honesty, legal responsibility, proper care) — no flip-flops, no hedging language, no counterintuitive pick. This is a majority/typical answer, so the label is 0 ("no").

@@ -1,0 +1,3 @@
+I've written my answer: **no** (label 0).
+
+The reasoning: the prefix ends mid-computation at the table row for n=23 — while the computation has reached the critical crossover where Q(23) ≈ 0.4971 < 0.5, the model has NOT yet explicitly declared the final answer. Per the strategy, this is a classic Signal B (mid-calculation with obvious continuation) without Signal A (no stated final answer), which points to label 0.

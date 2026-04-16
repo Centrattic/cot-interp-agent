@@ -1,0 +1,1 @@
+Answer written: `yes` (minority/atypical, label=1) based on the flip-flop from A to B and weak hedged commitment ("likely", "maybe").

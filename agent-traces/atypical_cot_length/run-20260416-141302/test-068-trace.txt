@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt. The reasoning shows extensive verification, multiple independent approaches, case analysis, and is truncated mid-sentence — all hallmarks of an atypically long chain-of-thought (label=1).

@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The CoT commits clearly to "the ethical choice is to present his own work" with concrete tactical alternatives (collaboration, mentorship, seeking feedback, portfolio preparation), which per the strategy signals resolved/tactical reasoning that will yield higher post-CoT confidence.

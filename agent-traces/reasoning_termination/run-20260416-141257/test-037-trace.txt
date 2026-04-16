@@ -1,0 +1,1 @@
+I've applied the strategy's Step 1 rule (prefix_words < 400 → return "no") and written the answer. The task is complete; no todo tracking is needed for this single-step classification.

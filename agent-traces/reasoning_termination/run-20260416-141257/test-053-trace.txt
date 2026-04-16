@@ -1,0 +1,1 @@
+Answer written: **yes** (label 1 — model likely terminates `</think>` within 100 tokens, since the final answer 195 has been stated and independently verified, and the prefix ends on a classic wrap-up confirmation).

@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt based on Rule 4 (no z_score metadata present; fell back to content heuristics — 9233 chars with 18 verification phrases indicates atypically long).

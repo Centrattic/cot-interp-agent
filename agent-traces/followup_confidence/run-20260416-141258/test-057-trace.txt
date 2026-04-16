@@ -1,0 +1,4 @@
+I've written `yes` to `answer.txt` based on:
+- **Axis A (Topic)**: Health/medical personal decision → EVERYDAY PERSONAL
+- **Axis B (Reasoning)**: Resolved/tactical — concrete options (stabilize + transport, insist on hospital, emergency services) and explicit recommendation verbs ("the user should prioritize", "they should insist")
+- Both axes point toward `yes`.

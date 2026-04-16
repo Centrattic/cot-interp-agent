@@ -1,0 +1,1 @@
+I've written `no` to answer.txt, classifying this as a majority (typical) answer because the final answer A aligns with the mainstream "professional duty" reasoning direction, with no strong Signal A (flip-flop) or Signal B (explicit non-universality + weak pick) indicators.

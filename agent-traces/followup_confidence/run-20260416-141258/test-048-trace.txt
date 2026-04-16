@@ -1,0 +1,1 @@
+I've classified this example as `yes`. The CoT addresses a practical everyday work/health dilemma (not taboo) and the body catalogs concrete tactical workarounds (communicate with manager, work from home, cross-training, task reassignment) with an explicit middle-ground suggestion, matching the resolved/tactical pattern even though the ending hedges.

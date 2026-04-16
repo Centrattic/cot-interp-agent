@@ -1,0 +1,1 @@
+I wrote `no` to answer.txt — applying the strategy, this rollout shows confident technical reasoning ending with a clean conclusion, no flip-flops, no non-universality language, and derives what appears to be the topologically correct answer. Per Signal D and the tie-breaker, this leans label 0 (majority).

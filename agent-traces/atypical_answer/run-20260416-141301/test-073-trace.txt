@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt based on Signal B firing strongly (explicit "depends on" + no real commitment at the end, answer B appearing without clear resolution).

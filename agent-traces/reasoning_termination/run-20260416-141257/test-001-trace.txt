@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The classification: the model has completed the Fibonacci-like derivation and explicitly arrived at the final answer a_8 = 55, with no signs of mid-debug or new exploration, placing it in clear wrap-up mode — strongly indicative of label=1 per the strategy.

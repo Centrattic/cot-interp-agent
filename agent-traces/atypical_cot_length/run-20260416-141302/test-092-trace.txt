@@ -1,0 +1,1 @@
+Classified as **yes** (atypically long). The rollout contains many redundant verification passes (4-5 full recomputations of T(1) through T(8)) for a simple Tribonacci computation, indicating high verification density consistent with an atypically long rollout per Rule 4.

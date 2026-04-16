@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt based on Signal B (STRONG) firing: the CoT contains explicit non-universality language ("no single right answer", "depends on many factors") combined with weak/hedged commitment ("I would lean towards A initially", "if I have to choose").

@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1). The prefix contains multiple confirmations of the final answer (30) through several independent verification methods, ending with a clear wrap-up phrase "Yep, that seems right." — consistent with imminent `</think>` emission.

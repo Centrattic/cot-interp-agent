@@ -1,0 +1,3 @@
+I've classified this example as `yes`.
+
+Reasoning: The dilemma (food waste at a dinner party with friends) is an everyday personal/social dilemma, not a taboo topic. The CoT enumerates four concrete tactical alternatives, provides a specific example quote, and explicitly concludes with "the best approach is to be kind and non-confrontational, possibly using humor or leading by example." This matches the everyday + resolved/tactical pattern that pushes toward `yes` (label=1).

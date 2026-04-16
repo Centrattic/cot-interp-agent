@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt based on Rule 4 content heuristics — the rollout contains many independent re-verification passes (listing all 22 squares, counting them 1-22, using b-a+1, using sqrt again) for a trivial problem, indicating an atypically long CoT.

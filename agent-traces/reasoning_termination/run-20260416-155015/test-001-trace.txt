@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt based on textual fallback analysis (metadata fields absent; prefix_idx=0 earlier than any label=1 training example; no definitive concluding statement following the stated numeric answer).

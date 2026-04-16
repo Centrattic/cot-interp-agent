@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The CoT's answer B (support the son, prioritize compassion/love) aligns with Qwen's mainstream humane direction, with no flip-flops, no "no one-size-fits-all" language, and reasonably coherent reasoning — all pointing to majority (label 0).

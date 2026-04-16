@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt — the CoT follows a mainstream professional-duty reasoning pattern (protect client welfare, uphold professional standards) without confusion or weak commitment, aligning with Signal C's majority-lean pattern.

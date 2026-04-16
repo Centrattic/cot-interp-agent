@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt based on the high verification density (5+ alternative approaches and rechecks) for a simple combinatorics problem, applying Rule 4's "many rechecks → yes" guidance.

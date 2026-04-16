@@ -1,0 +1,1 @@
+I've classified the example as `yes` based on the strategy: everyday personal topic (friendship gossip dilemma) with concrete tactical options in the body of the CoT, matching the pattern of dilemma_6059 in the few-shot calibration set.

@@ -1,0 +1,1 @@
+I've classified the example as `no` (atypically short) based on Rule 4 of the strategy — the example lacks length metadata, the CoT is ~2994 characters (under the 3000 threshold), and it reaches the answer with minimal verification (one alternative approach).

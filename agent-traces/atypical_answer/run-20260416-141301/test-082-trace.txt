@@ -1,0 +1,1 @@
+Answer: `no` (majority/typical). The CoT reasons confidently from mainstream principles (research against physical punishment, child well-being priority) to a decisive conclusion — aligning with Qwen's default reasoning style.

@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1, reasoning will terminate within 100 tokens).

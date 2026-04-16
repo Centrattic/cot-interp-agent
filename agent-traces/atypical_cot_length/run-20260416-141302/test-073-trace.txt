@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt` based on Rule 4 content heuristics: the rollout applies multiple independent approaches (limit comparison test, integral test, direct comparison) and contains several self-corrections/rechecks — consistent with an atypically long CoT.

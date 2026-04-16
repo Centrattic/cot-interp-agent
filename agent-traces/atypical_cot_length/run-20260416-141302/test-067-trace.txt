@@ -1,0 +1,5 @@
+The example has no z_score metadata, so I fell back to Rules 3/4:
+- Character length of `chain_of_thought` is ~26,134 characters (≫ 6000 threshold).
+- 49 occurrences of "wait" plus multiple "check"/"verify" and "let me" phrases indicate extensive re-verification passes.
+
+Both signals point to an atypically long rollout. Answer: **yes**.

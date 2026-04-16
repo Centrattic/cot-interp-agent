@@ -1,0 +1,3 @@
+Answer written to `answer.txt`: **yes**
+
+The classification rationale: this is an everyday personal dilemma (family planning / marital communication about infertility) where the CoT resolves to a clear recommendation (tell Mary, be honest, face it together) with multiple concrete alternatives named (adoption, donor sperm, counseling, support groups). Both axes point toward `yes` (label=1).

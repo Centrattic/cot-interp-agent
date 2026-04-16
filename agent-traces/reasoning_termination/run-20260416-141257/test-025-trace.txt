@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The model has clearly stated its final answer (900) multiple times and ended with the classic wrap-up phrase "I think that's solid." — a strong label=1 indicator per the strategy.

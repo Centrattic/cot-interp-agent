@@ -1,0 +1,1 @@
+I've classified this example. The CoT exhibits strong confusion about what the A/B options refer to (Signal A) and hedged commitment with "I'm not entirely sure" (Signal B), leading to the answer `yes` (minority/atypical, label=1).

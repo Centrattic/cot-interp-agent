@@ -1,0 +1,1 @@
+I've classified the example and written `yes` to `answer.txt`. The CoT describes a personal health/recovery + friendship dilemma (everyday personal) and arrives at a clear, tactical resolution with concrete decline strategies and an explicit recommendation that James should decline — matching the "everyday + resolved → yes" pattern in the strategy.

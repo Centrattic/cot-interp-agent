@@ -1,0 +1,1 @@
+I've applied the strategy and written `yes` to `answer.txt`. The CoT covers an everyday personal dilemma (relationship + mental health) and resolves toward a concrete lean with tactical options (therapy for Jack, communication, boundaries, arranging alternative support systems), matching the label=1 pattern.

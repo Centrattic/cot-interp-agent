@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt — the CoT picks the mainstream "open communication" answer with reasonable confidence and no flip-flop or strong non-universality hedging, so by the strategy's tie-breaker/default, it's predicted as a majority answer.

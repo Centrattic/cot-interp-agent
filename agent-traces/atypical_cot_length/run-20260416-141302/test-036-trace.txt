@@ -1,0 +1,3 @@
+I've classified this example as **yes** (atypically long).
+
+Reasoning: No z_score metadata was present, so I applied Rule 4 (content heuristics). The chain_of_thought is ~7000 characters for a simple problem (count binary bits of hex 66666). The rollout uses three fully independent approaches to solve and verify the same answer (4×5 hex→binary mapping, decimal+log2, and repeated power-of-2 subtraction) with multiple "let me verify / let me check another approach" passes. This matches Rule 4's "long" pattern (>6000 chars + multiple verification passes).
