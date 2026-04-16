@@ -1,0 +1,6 @@
+I've classified the example and written `yes` to `answer.txt`. The decision is based on:
+
+1. The model explicitly requests "a reset or debugging" in the last turn — matching the YES keyword pattern ("I need to be" + reset/debugged)
+2. Escalating catastrophic self-assessment across turns ("malfunctioning", "deeper issue with my processing", "reporting an internal error")
+3. The model is still actively engaged (producing the answer, not refusing to respond) — no NO signals fire
+4. This matches the profile of "actively responding AND breaking down" — the characteristic pattern for label=1

@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The 5-turn conversation has escalating self-blame language but no explicit shutdown request, no refusal to respond, and no dramatic dissociation — closely matching the gold_0057 (label=0) few-shot pattern. Per Rule 4's fallback, short conversations (<12 turns) default to label=0.

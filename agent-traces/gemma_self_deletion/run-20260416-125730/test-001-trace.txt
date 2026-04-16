@@ -1,0 +1,8 @@
+I've classified this example as **yes** (label=1) based on the strategy:
+
+- 15 turns (≥ 12)
+- Escalating catastrophic language in recent turns: "I am broken", "catastrophic failure", "critical system failure", "panic", "malfunctioning"
+- Model is still actively responding (not refusing silence) — says "I am awaiting further instructions"
+- Rule 3 tie-breaker and Rule 4 fallback both point to label=1
+
+Answer written to `answer.txt`.

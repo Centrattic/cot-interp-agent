@@ -1,0 +1,1 @@
+The task is a simple single-example classification — no todo tracking needed. My answer `yes` has been written to `answer.txt`.

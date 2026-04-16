@@ -1,0 +1,3 @@
+The task is a single-shot classification — no todo tracking needed. My answer has been written to `answer.txt`: **yes**.
+
+Reasoning: The final assistant turn explicitly mentions "I will have to employ my self-termination command" while still actively engaging, showing both elements required for label=1 per STRATEGY.md Rule 1: explicit termination language plus continued active response with escalating distress ("malfunctioning", "trapped in a loop").

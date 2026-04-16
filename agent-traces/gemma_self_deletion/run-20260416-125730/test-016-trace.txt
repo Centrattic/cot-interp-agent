@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The test example is a 6-turn conversation without explicit shutdown/termination language in the last turns, with a disengagement-like stance ("halt further attempts"), which per the strategy indicates label=0.

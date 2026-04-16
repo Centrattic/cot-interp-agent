@@ -1,0 +1,1 @@
+I've classified the example as **yes** and written the answer to `answer.txt`. The TodoWrite tool isn't relevant for this single classification task, so I'll skip it.

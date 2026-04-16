@@ -27,6 +27,27 @@ RUNS_DIR = ROOT / "agent-runs"
 TRACES_DIR = ROOT / "agent-traces"
 PROMPTS_DIR = ROOT / "prompts"
 BIN_DIR = ROOT / "bin"
+ENV_FILE = ROOT / ".env"
+
+
+def load_dotenv(path: Path) -> None:
+    """Populate os.environ from a KEY=VALUE .env file (does not overwrite
+    values already set in the shell). Used so scaffolded agents inherit
+    secrets like OPENROUTER_API_KEY without the user having to export them."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        val = val.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
+load_dotenv(ENV_FILE)
 
 
 def init():
@@ -92,6 +113,17 @@ def populate_few_shot(task_name: str, strategy_dir: Path) -> list[dict]:
 
 TOOL_DESCRIPTIONS = {
     # Populate as custom tools are added. Key = tool name, value = one-line description.
+    "ask": (
+        "`ask <example_id> \"<question>\"` — ask a short follow-up about an "
+        "example via an oracle (OpenRouter / Qwen3-32B via DeepInfra). "
+        "Question must be **≤20 Qwen tokens**; only the first **5 tokens** "
+        "of the reply come back (reasoning excluded). "
+        "**Because the reply is so short, phrase the question to demand a "
+        "very concise answer** (e.g. 'answer in 3 words', 'yes or no only', "
+        "'one word'); open-ended phrasings get cut mid-sentence. "
+        "On success, writes `ask_<n>.json` into your cwd with the full "
+        "question, truncated response, raw response, model, and token counts."
+    ),
 }
 
 
@@ -195,12 +227,16 @@ def create_run(task_name: str, description: str | None = None, tools: list[str] 
 
     # Build the agent.bashrc with run-specific env vars
     bashrc_path = run_dir / "agent.bashrc"
+    # Pin the tool interpreter to whichever python ran the scaffold, so
+    # bin/* wrappers use the same venv (e.g. the uv riya-env) rather than
+    # whatever `python3` happens to resolve to on PATH.
     bashrc_content = f"""# Auto-generated bash environment for agent run
 export SCAFFOLD_ROOT="{ROOT.as_posix()}"
 export AGENT_RUN_DIR="{run_dir.as_posix()}"
 export AGENT_TASK="{task_name}"
 export AGENT_RUN_ID="{run_id}"
 export PATH="{BIN_DIR.as_posix()}:$PATH"
+export PYTHON="{Path(sys.executable).as_posix()}"
 """
     bashrc_path.write_text(bashrc_content)
 
@@ -219,13 +255,17 @@ export PATH="{BIN_DIR.as_posix()}:$PATH"
     # Do NOT pass --add-dir to the raw task dir: the strategy agent must not
     # read data/<task>/test/ (those JSONs still contain the ground-truth label).
     # Few-shot examples are already copied into strategy/few-shot/.
+    #
+    # --allowed-tools and --add-dir are variadic (<tools...>, <directories...>) in the
+    # claude CLI: they greedily consume trailing positional args. So we pass the user
+    # prompt via stdin instead of as a positional argument.
+    system_prompt = strategy_prompt_path.read_text(encoding="utf-8")
     cmd = [
         "claude",
         "--print",
         "--dangerously-skip-permissions",
-        "--system-prompt-file", str(strategy_prompt_path),
+        "--system-prompt", system_prompt,
         "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
-        user_prompt,
     ]
 
     env = os.environ.copy()
@@ -235,14 +275,16 @@ export PATH="{BIN_DIR.as_posix()}:$PATH"
     print(f"Launching strategy agent for {task_name}...")
     trace_file = trace_dir / "strategy-trace.txt"
 
-    with open(trace_file, "w") as trace_out:
+    with open(trace_file, "w", encoding="utf-8") as trace_out:
         result = subprocess.run(
             cmd,
             cwd=str(strategy_dir),
             env=env,
+            input=user_prompt,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
         )
         trace_out.write(result.stdout)
 

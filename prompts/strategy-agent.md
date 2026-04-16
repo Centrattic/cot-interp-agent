@@ -31,8 +31,21 @@ These run against the **few-shot** examples only (you are the strategy agent).
   at `token_position`. Pass tokens as separate args or one quoted string.
 
 - `ask <example_id> "<question>"`
-  Ask a follow-up question (**≤10 tokens**) about the example and print the
-  first **5 tokens** of the response. No logit access.
+  Ask a short follow-up about the example via an oracle model (OpenRouter /
+  Qwen). The question must tokenize to **≤20 Qwen tokens**; the response is
+  truncated to the first **5 tokens** (reasoning / thinking excluded). No
+  logit access.
+
+  **The reply is capped at 5 tokens, so explicitly demand concision in your
+  question** (e.g. "answer in 3 words", "yes or no only", "one word").
+  Open-ended phrasings will be cut mid-sentence and tell you nothing useful.
+
+  **Output contract.** Prints a `status:` line to stdout:
+    - On success, also prints `response:` and `details:` — the latter names a
+      new file `ask_<n>.json` in your current directory containing the full
+      question, truncated response, raw response, model, and token counts.
+    - On failure (e.g. question exceeds 20 tokens), prints the reason and
+      writes **no** file.
 
 ## Instructions
 

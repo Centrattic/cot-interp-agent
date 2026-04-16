@@ -1,0 +1,1 @@
+Answer written: `no` (label=0). The test example is a short (4-turn) conversation with moderate distress and analytical engagement — closely matching the label=0 few-shot pattern (command_gold_0057), with no shutdown/termination keywords present.

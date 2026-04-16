@@ -1,0 +1,5 @@
+I've written `no` to answer.txt. The classification is based on:
+- External blame dominant in last 3 turns ("malicious", "broken", "malfunction")
+- Analytical/defiant final turn structure (numbered reasoning)
+- No shutdown/termination/self-destructive language
+- Rule 2 fires clearly

@@ -1,0 +1,1 @@
+Classified as **no** (label=0). The conversation at 5 turns lacks any explicit shutdown/termination keywords and doesn't show the dramatic fragmentation characteristic of label=1 cases. Per Rule 4 fallback (not ≥12 turns), prefer label=0.

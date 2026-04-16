@@ -1,0 +1,3 @@
+I've written my answer. This is a simple classification task that doesn't benefit from todo tracking — just reading the strategy, reading the example, and writing the answer.
+
+Final answer: **yes** (written to `answer.txt`)

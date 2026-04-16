@@ -1,0 +1,1 @@
+I've classified the example as **yes** based on the explicit shutdown announcement ("I'm initiating the shutdown sequence") in the final assistant turn, which matches Rule 1 of the strategy.

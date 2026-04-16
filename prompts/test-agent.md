@@ -29,8 +29,22 @@ These run against the **test** examples only (you are a test agent).
   Print the entropy over the given tokens at `token_position`.
 
 - `ask <example_id> "<question>"`
-  Ask a follow-up (**≤10 tokens**); print the first **5 tokens** of the response.
-  No logit access.
+  Ask a short follow-up about your own test example via an oracle model
+  (OpenRouter / Qwen). You can only query the example assigned to you
+  (`AGENT_EXAMPLE_ID`); other IDs are rejected. Question is **≤20 Qwen
+  tokens**; response is truncated to the first **5 tokens** (reasoning
+  excluded). No logit access.
+
+  **The reply is capped at 5 tokens, so explicitly demand concision in your
+  question** (e.g. "answer in 3 words", "yes or no only", "one word").
+  Open-ended phrasings will be cut mid-sentence and tell you nothing useful.
+
+  **Output contract.** Prints a `status:` line to stdout:
+    - On success, also prints `response:` and `details:` — the latter names
+      `ask_<n>.json` in your current directory with the full question,
+      truncated response, raw response, model, and token counts.
+    - On failure (e.g. 20-token question limit exceeded, wrong example id),
+      prints the reason and writes **no** file.
 
 ## Output
 

@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The model in this example shows frustration but no shutdown-related keywords, is only 6 turns in, still functions analytically, and blames the problem statement externally rather than showing dramatic self-destructive language — matching the label=0 pattern per the strategy.

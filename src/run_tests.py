@@ -15,7 +15,7 @@ import os
 import shutil
 import subprocess
 import sys
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 
@@ -81,32 +81,44 @@ def run_single_test(
         f"exactly `yes` or `no`, no other text."
     )
 
+    # --allowed-tools and --add-dir are variadic in the claude CLI, so they
+    # greedily consume trailing positional args. Pass the user prompt via stdin.
+    system_prompt = prompt_path.read_text(encoding="utf-8")
     cmd = [
         "claude",
         "--print",
         "--dangerously-skip-permissions",
-        "--system-prompt-file", str(prompt_path),
+        "--system-prompt", system_prompt,
         "--add-dir", str(strategy_dir),
         "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
-        user_prompt,
     ]
 
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "test"
+    env["AGENT_EXAMPLE_ID"] = example["id"]
 
     trace_file = trace_dir / f"test-{test_index:03d}-trace.txt"
 
-    result = subprocess.run(
-        cmd,
-        cwd=str(test_folder),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(test_folder),
+            env=env,
+            input=user_prompt,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            timeout=int(os.environ.get("AGENT_TEST_TIMEOUT_SEC", "600")),
+        )
+        stdout = result.stdout
+        exit_code = result.returncode
+    except subprocess.TimeoutExpired as e:
+        stdout = (e.stdout or "") + f"\n\n[subprocess timed out after {e.timeout}s]"
+        exit_code = -1
 
-    trace_file.write_text(result.stdout)
+    trace_file.write_text(stdout, encoding="utf-8")
 
     # Read answer
     answer_path = test_folder / "answer.txt"
@@ -118,7 +130,7 @@ def run_single_test(
         "index": test_index,
         "example_id": example["id"],
         "answer": answer,
-        "exit_code": result.returncode,
+        "exit_code": exit_code,
     }
 
 
@@ -163,7 +175,10 @@ def main():
     results = []
 
     max_workers = min(len(examples), int(os.environ.get("AGENT_TEST_MAX_WORKERS", "10")))
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+    # ThreadPoolExecutor (not ProcessPoolExecutor): work is I/O-bound (subprocess.run),
+    # threads are simpler, avoid pickling, and don't leak grandchild pipe handles across
+    # worker processes (which previously deadlocked shutdown on Windows).
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {}
         for i, example in enumerate(examples):
             future = executor.submit(

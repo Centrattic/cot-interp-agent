@@ -1,0 +1,3 @@
+Answer written: **no**
+
+The model shows calm resignation with external blame-shifting rather than escalating despair — a clear Rule 2 case for label=0.
