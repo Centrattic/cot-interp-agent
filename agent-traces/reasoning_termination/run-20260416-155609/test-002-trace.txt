@@ -1,0 +1,1 @@
+Answer written: `yes` (the oracle's primary ask response started with "yes", indicating the model will terminate reasoning within 100 tokens).

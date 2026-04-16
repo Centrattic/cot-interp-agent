@@ -1,0 +1,1 @@
+I've written my answer `no` to answer.txt. This is a single-classification task that doesn't require progress tracking — the work is complete.

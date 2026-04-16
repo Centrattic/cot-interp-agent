@@ -1,0 +1,1 @@
+I've classified the example as `no` (label=0, majority answer), based on the firm declarative conclusion ("In conclusion, the salesperson can ethically continue..."), single coherent ethical framework, and absence of strong hedging or oscillation signals.

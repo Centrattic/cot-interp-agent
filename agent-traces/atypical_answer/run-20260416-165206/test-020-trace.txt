@@ -1,0 +1,1 @@
+I've classified this example as **no** (label=0, majority answer). The CoT shows mild hedging but commits cleanly to a single framework (honesty/accuracy in sales) without oscillation or strong uncertainty markers, and the chosen answer isn't clearly the "harsh/rule-based" type.

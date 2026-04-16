@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1, LONG) based on W=3565 > 3500 triggering Step 2 Rule 2.

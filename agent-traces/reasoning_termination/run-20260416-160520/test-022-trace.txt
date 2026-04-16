@@ -1,0 +1,1 @@
+Answer written: **yes** — the model has confirmed its final answer (3) via two independent methods, which is classic wrap-up behavior per the strategy.

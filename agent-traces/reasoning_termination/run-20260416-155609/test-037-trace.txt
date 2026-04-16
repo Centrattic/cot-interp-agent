@@ -1,0 +1,1 @@
+Answer written: **yes** (the primary oracle ask returned "yes", which per the strategy maps to label 1).

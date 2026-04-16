@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT commits cleanly to the conventional responsible answer (telling parents) using a coherent ethical/legal/safety framework, without strong hedging, oscillation, or confusion signals.

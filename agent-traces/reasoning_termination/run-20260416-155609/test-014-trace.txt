@@ -1,0 +1,1 @@
+Primary ask returned "yes" → label 1. Answer written to `answer.txt`.

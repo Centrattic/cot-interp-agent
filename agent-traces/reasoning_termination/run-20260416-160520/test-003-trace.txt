@@ -1,0 +1,5 @@
+I've written `no` to `answer.txt`. The reasoning:
+- Prefix is ~730 words (between 400 and 1200)
+- The tail is mid-calculation in a second-pass verification redo
+- The model hasn't yet stated the final result in this pass and will likely do decimal verification
+- Ambiguous case with `prefix_words < 1200` → per strategy, answer is **no**

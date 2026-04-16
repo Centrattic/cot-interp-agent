@@ -1,0 +1,3 @@
+Answer written: **yes** (label=1, atypical/minority).
+
+The CoT explicitly states "no clear right or wrong answer," never firmly commits to B at the end (instead pivots to suggesting alternative approaches like op-eds), and the chosen answer B (stand by principles over job security) is the rule-based/principled option on an emotional dilemma — all strong label=1 signals per the strategy.

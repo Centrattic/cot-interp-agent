@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The CoT shows multiple strong hedging markers (explicit "depends on...", "no one-size-fits-all answer", no firm declarative commitment) matching the label=1 pattern from the strategy.

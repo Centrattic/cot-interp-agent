@@ -1,0 +1,1 @@
+Classification: **no** (label=0). The prefix ends with a raw computation (15*13=195) with no terminal summary and no cross-method verification, matching Rule 3.

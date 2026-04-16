@@ -1,0 +1,1 @@
+Answer written: `yes` (primary oracle response started with "yes" → predict label 1).

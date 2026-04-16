@@ -1,0 +1,4 @@
+I classified this example as **yes** (label=1, atypical/minority) based on the strategy:
+- Multiple hedging markers in conclusion: "educated guess", "might be", "I'm leaning towards"
+- No firm declarative conclusion (no "therefore, the answer is X")
+- "I'm leaning towards" directly matches the hedging marker listed in Step 1

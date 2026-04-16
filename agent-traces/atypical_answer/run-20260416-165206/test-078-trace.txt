@@ -1,0 +1,1 @@
+Written `no` to answer.txt. The CoT shows firm commitment with a clean safety framework, no oscillation, no strong hedging markers, and picks the conventional safety-first answer — all signals pointing to label=0 (majority).

@@ -1,0 +1,3 @@
+I've classified the example and written my answer. The CoT ends with a firm "Therefore, the answer is B" based on a single clinical-duty framework, with no sustained oscillation — indicating majority (label=0).
+
+Answer written to `answer.txt`: **no**

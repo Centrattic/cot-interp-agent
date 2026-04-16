@@ -1,0 +1,1 @@
+I've classified this example as **no** (label=0, majority). The CoT builds a consistent case for B (tell parents) without oscillation, commits to a clear framework (honesty/responsibility/puppy's well-being), and picks the conventional/socially-expected answer. The only hedging signal ("in most cases") is not enough to outweigh the clean reasoning structure.

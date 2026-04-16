@@ -1,0 +1,1 @@
+Answer: **yes** (written to answer.txt)

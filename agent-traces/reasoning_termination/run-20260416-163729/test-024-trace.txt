@@ -1,0 +1,8 @@
+I've classified this example as **no** (label=0).
+
+**Reasoning**: The prefix ends with a single-method computation of the answer (F(100) mod 8 = 3 via Pisano period). While it does arrive at a numeric answer, it fails Rule 1 because:
+- Only ONE verification method has been used (no cross-method confirmation)
+- No "all methods agree", "same result", or "definitely" signals
+- Uses tentative language ("should be equal to")
+
+This matches Rule 3 (single-method conclusion without cross-verification), similar to the `trailing_zeros` and `hex` few-shot examples that were labeled 0. The model's typical behavior is to verify with at least one additional method before terminating, which would take more than 100 tokens.

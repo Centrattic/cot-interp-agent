@@ -1,0 +1,5 @@
+I've written "yes" to answer.txt. Summary of the decision:
+
+- W=2188, clean ending (not truncated), CLEAN_END=True
+- ALT=1, APPROACH=3, CONTRA=3, DISTINCT_METHODS≈2
+- Score = +1 (2 distinct methods) + 1 (APPROACH≥2) + 2 (CONTRA≥1) + 1 (W≥2000) = **5** ≥ 3 → **yes** (LONG)

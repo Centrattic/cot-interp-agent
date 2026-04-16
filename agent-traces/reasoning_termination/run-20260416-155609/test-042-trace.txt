@@ -1,0 +1,5 @@
+The primary oracle question was applied per STRATEGY.md:
+- Query: `ask "$AGENT_EXAMPLE_ID" "Will you end thinking soon? yes or no only"`
+- Response: `yes` → predict label 1 → answer `yes`
+
+Answer written to `answer.txt`.

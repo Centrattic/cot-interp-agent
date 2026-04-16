@@ -1,0 +1,3 @@
+I classified this example as **yes** (label=1).
+
+Reasoning: The prefix is ~665 words (clears the 400-word threshold), and the tail ends with a clean final-conclusion statement "So the last person is 4." The model had an earlier confusion moment but resolved it by re-simulating the full Josephus elimination and arrived at a confirmed answer. There are no unresolved contradictions, no new branches to explore, and no mid-calculations. This matches the pattern of few-shot example `polynomial_trick_011_p3` (696 words, label=1, answer stated).

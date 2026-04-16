@@ -1,0 +1,1 @@
+I've classified this example by applying Rule 1 of the strategy: both a terminal "Therefore, the GCD is 2^3 = 8" closure sentence and a cross-method confirmation ("That confirms the earlier result. So both methods give me 8.") are present. The answer `yes` has been written to `answer.txt`.

@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. This is a single-step classification task where TodoWrite isn't applicable.

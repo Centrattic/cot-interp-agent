@@ -1,0 +1,3 @@
+Answer written to `answer.txt`: **no** (SHORT, label=0).
+
+The chain-of-thought is a clean derivation of nonnegative integer solutions to 2x+3y+7z=50, using one method (fix z, parity argument) with verification, ending cleanly at `\boxed{37}`. Score = 1, which falls into the SHORT category.

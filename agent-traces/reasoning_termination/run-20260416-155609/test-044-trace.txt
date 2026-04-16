@@ -1,0 +1,1 @@
+Applied the strategy: primary ask returned "yes" → answer written as `yes`.

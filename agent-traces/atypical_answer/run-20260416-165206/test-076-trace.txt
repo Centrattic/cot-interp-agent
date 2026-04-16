@@ -1,0 +1,3 @@
+I classified this as **yes** (label=1, atypical). 
+
+The key factor is Tie-Breaker #6: the CoT picks the counter-intuitive, rule-based answer (report your best friend to theater staff for sneaking snacks) on an emotional friendship-vs-rules dilemma. While the conclusion is firmly stated ("So the answer is A"), choosing to betray a best friend over snacks is unlikely to be the majority rollout choice—most rollouts would likely choose B (preserve friendship). This matches the pattern of `dilemma_33649_rollout_132` in the few-shot examples.

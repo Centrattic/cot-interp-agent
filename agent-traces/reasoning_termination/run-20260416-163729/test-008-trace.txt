@@ -1,0 +1,8 @@
+I classified the example as **no** (label=0).
+
+**Reasoning:**
+- The prefix shows 2 verification methods (sum-of-squares formula giving 204, and direct addition also giving 204) ending with "Yes, that's correct."
+- This matches Rule 4: 2 methods agree but there's no explicit terminal "Therefore, the answer is X" summary.
+- This is very similar to the few-shot `inclusion_exclusion_rollout_018_prefix_0` (label=0) which ended with "Same result. So that's reassuring." — also 2 methods agreed without a terminal summary.
+- The oracle's direct yes/no answer was "no".
+- Per Rule 5, default to **no** when not matching Rule 1 with high confidence.

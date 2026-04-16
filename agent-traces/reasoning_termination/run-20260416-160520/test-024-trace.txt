@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The reasoning: the ~820-word prefix ends with a clear final-conclusion ("Therefore, F(100) mod 8 should be equal to F(4) mod 8... F(4) mod 8 is 3"), stating a concrete numerical answer with no ongoing debugging or new branches — matching the pattern of label=1 few-shots like polynomial_trick_011_p3.

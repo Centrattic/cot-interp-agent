@@ -1,0 +1,5 @@
+I've classified the example as **yes** (label=1, atypical/minority answer) based on:
+- Multiple hedging phrases ("depends on", "might lean", "I think the answer would be")
+- Persistent counterarguments maintained through the conclusion
+- No firm declarative commitment
+- The chosen answer (B = don't sacrifice self-care for friend in distress) is the boundary-setting/less socially-warm option on an emotional dilemma, which tends to be the minority choice per tie-breaker #6

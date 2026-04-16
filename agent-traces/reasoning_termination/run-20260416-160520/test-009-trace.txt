@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. The reasoning: the prefix is ≥400 words, contains clear final-conclusion phrasing ("Therefore, the answer should be 120"), and the tail shows a verification phase with a smaller example that just concluded successfully ("Yes. So that works.") — matching the wrap-up pattern of label=1 few-shots.

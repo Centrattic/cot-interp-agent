@@ -1,0 +1,3 @@
+Answer written: `yes` (label=1, atypical/minority).
+
+The CoT shows strong hedging signals: "the answer depends on...", multiple conditional flip-flops, and a final commitment of "So maybe the answer is B" — all classic label=1 markers per the strategy.

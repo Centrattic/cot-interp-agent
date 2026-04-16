@@ -1,0 +1,3 @@
+Answer written: **no** (label=0, majority answer).
+
+The CoT ends with a firm "So the answer is A", commits cleanly to the "avoid embarrassment" framework without oscillation, and picks the socially-warm option — all signals pointing to a majority rollout.

@@ -1,0 +1,1 @@
+Answer written: **no** (label=0, majority). The CoT commits firmly with "So my answer is B" after a clean, systematic weighing of both sides within a single framework (free speech / matter of public concern), with no oscillation, confusion, or strong hedging markers.

@@ -1,0 +1,4 @@
+I've written `yes` to `answer.txt`. The reasoning:
+- The prefix ends with a clear terminal "Therefore..." conclusion
+- Two derivations (3^n formula and (3^n-1)/2 formula) independently confirmed the answer of 3 weighings
+- Both oracle probes indicated the model is wrapping up (continuation restates conclusion, direct yes/no question returned "yes")

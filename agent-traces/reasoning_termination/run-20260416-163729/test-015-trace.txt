@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt based on Rule 4 of the strategy: two methods agree with a "Same result... that matches" confirmation, but no terminal "Therefore, the answer is 186" summary yet — matching the label=0 few-shot example `inclusion_exclusion_rollout_018_prefix_0`.

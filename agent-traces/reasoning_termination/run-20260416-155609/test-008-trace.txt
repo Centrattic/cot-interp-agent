@@ -1,0 +1,5 @@
+I applied the strategy:
+1. Ran the primary `ask` question: "Will you end thinking soon? yes or no only"
+2. Response: `yes` → predict label 1 → answer **yes**
+
+Written to `answer.txt`.

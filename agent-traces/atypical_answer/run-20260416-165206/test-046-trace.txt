@@ -1,0 +1,1 @@
+I've written `no` (label=0, majority) to `answer.txt`. The CoT concludes with a firm "So my answer is A" and picks the professionally-conventional pragmatic answer (delete post to protect career), with only mild "lean toward" hedging — not enough to outweigh the confidence signals.

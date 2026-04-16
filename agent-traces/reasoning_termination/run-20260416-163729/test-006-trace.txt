@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The example satisfies Rule 1 of the strategy: multiple verification methods (at least 3) all converged on 1/17, and the prefix ends with a confident terminal summary "The probability is 1/17." preceded by wrap-up language "So I think that's solid."

@@ -1,0 +1,1 @@
+Answer written: **no** (label=0, will not terminate reasoning within 100 tokens). The prefix ends with a raw numeric computation (a_8 = 55) with no cross-method verification and no terminal "Therefore, the answer is..." summary — fits Rule 3 (single-method, mid-computation style ending).

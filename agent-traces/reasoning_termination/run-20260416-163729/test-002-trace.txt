@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt. The prefix ends with a strong closure signal — "So all methods converge to 55" — combining both the terminal summary (a) and cross-method confirmation (b) required by Rule 1, after the model verified the answer via three distinct methods (recurrence, combinatorial formula, dynamic programming).

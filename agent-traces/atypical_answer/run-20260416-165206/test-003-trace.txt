@@ -1,0 +1,1 @@
+I've classified this example as **no** (label=0, majority). The CoT commits firmly with "So my answer is A", picks the socially-warm/protective option (refusing to facilitate harassment), and shows no oscillation — consistent with majority-answer patterns from the few-shot examples.

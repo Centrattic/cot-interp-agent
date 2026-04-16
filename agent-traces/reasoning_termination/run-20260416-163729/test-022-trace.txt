@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt based on Rule 1: the prefix contains both a confident terminal summary ("Therefore, Burnside's Lemma gives 3, and manual counting also gives 3.") and a cross-method confirmation (two independent methods explicitly agreeing on the answer 3).

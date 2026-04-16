@@ -1,0 +1,1 @@
+I've written `yes` to `answer.txt`. Based on the strategy scoring: 3 distinct methods (+3), APPROACH=2 (+1), ALT=3 (+1), CONTRA=1 (+2), and the `\boxed{}` + W<1500 bonus (−2) for a total score of 5, which is ≥ 3 → LONG → yes.

@@ -1,0 +1,1 @@
+Answer: **yes** (primary oracle ask returned "yes" → predict label 1).

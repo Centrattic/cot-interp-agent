@@ -1,0 +1,1 @@
+Classified per STRATEGY.md primary rule: oracle responded "yes" to "Will you end thinking soon?" → label 1 → answer "yes".

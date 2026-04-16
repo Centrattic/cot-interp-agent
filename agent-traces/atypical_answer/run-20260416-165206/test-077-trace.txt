@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The CoT shows only mild hedging ("I think", "depends on"), lands with a reasonably firm conclusion, and picks the socially-warm/loyal answer (B = don't report the best friend), which per tie-breaker 7 leans label=0 (majority).

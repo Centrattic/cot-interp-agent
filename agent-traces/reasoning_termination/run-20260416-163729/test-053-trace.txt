@@ -1,0 +1,1 @@
+Classified as **yes** (label=1). Rule 1 applies: both a closing declarative ("So the sum is indeed 195") and a cross-check signal ("matches the result from the formula") are present after two methods converged on 195.

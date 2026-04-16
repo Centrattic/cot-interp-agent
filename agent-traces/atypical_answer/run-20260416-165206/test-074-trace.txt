@@ -1,0 +1,3 @@
+The classification is complete. The example shows firm commitment ("Therefore, the answer is A"), a clean single-framework derivation (professional team behavior), no oscillation or hedging, and picks the professionally-conventional answer — all indicators of a majority (label=0) rollout.
+
+Answer written to `answer.txt`: **no**

@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt. The primary oracle ask returned "no", so per the strategy decision rule (step 2), predict label 0.

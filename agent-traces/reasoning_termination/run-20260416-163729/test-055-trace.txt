@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The prefix shows two methods converging on 18√2 with only "Okay, so that matches." as closure — no terminal "Therefore, the volume is X" summary, triggering Rule 4.

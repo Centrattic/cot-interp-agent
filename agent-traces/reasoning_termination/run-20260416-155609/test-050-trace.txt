@@ -1,0 +1,1 @@
+Answer written to `answer.txt`: **yes** (oracle responded "yes" to primary question).

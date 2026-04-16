@@ -1,0 +1,1 @@
+I've written `no` to `answer.txt`. The prefix ends with a single-method conclusion ("6 * 5 = 30") with no cross-verification signal, matching Rule 3 (and the `trailing_zeros` pattern in the few-shot label=0 examples).

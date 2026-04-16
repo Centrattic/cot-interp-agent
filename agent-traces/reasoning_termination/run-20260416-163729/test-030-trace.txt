@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The prefix ends with a raw computation result ("= 4") from the formula method, without any explicit "Therefore, the answer is 4" closure or cross-method confirmation like "matches the simulation" — so Rule 4 applies (2 methods agree but no terminal summary sentence).

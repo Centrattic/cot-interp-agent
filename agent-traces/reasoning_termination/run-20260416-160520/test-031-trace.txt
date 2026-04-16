@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt based on Step 1 of the strategy: prefix has 364 words (< 400), so the rule directs answer=no.

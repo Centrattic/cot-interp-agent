@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt. The prefix ends with "four ways. All leading to 24" — a textbook Rule 1 match with both final-answer closure and cross-method agreement.

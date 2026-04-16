@@ -1,0 +1,8 @@
+I've written my answer to `answer.txt`. 
+
+Summary of classification:
+- Word count ≈ 1242 (middle band, 700 ≤ W ≤ 3500)
+- Not truncated — ends cleanly with "Therefore, the answer is 0 extra shoes."
+- ALT=1, APPROACH=0, CONTRA=0, DISTINCT_METHODS=1
+- CLEAN_END applies with terse restatement → -3 override
+- Final score = -3 ≤ 1 → label 0 → **no**

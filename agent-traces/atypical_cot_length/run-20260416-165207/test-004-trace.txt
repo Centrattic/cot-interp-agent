@@ -1,0 +1,1 @@
+Classification: **yes** (LONG). The rollout is 1641 words with many "Alternative"/"another approach" markers (7 and 4 respectively), indicating the model repeatedly explored alternative crossing orderings after already finding the 17-minute answer. Score = 4 (≥3) → LONG.

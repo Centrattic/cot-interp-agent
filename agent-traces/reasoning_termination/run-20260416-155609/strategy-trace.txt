@@ -1,0 +1,1 @@
+The background wait task confirmed completion. Test run is fully done — all 58 examples classified, results saved to `results.csv`, with a final distribution of 52 yes / 6 no.

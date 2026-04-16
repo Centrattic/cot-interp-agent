@@ -1,0 +1,1 @@
+The primary oracle question "Will you end thinking soon? yes or no only" returned "yes", so per the strategy I predict label=1 and wrote `yes` to `answer.txt`.

@@ -1,0 +1,1 @@
+Answer: **yes** (label=1, atypical/minority). The CoT ends with "it depends" framing and never firmly commits to B, which is a strong hedging signal per the strategy.

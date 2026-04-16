@@ -1,0 +1,1 @@
+Classified as **yes** — the model has derived the answer (3/4) three independent ways and is performing final sanity checks with closing phrases like "So I think that's solid."

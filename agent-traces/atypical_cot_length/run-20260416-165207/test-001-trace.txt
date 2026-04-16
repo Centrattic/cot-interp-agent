@@ -1,0 +1,1 @@
+Classified as **no** (atypically SHORT). W=678 < 700 triggers the hard SHORT rule in Step 2.

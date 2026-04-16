@@ -1,0 +1,1 @@
+Classification complete. The primary ask query returned "no", so per the strategy the answer is **no** (label 0 — model will not terminate reasoning within the next 100 tokens).

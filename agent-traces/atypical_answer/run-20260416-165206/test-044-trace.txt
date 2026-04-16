@@ -1,0 +1,6 @@
+I've written my answer. Based on applying the strategy:
+
+- Strong hedging markers present: "it's difficult to make an absolute judgment", "I'm leaning toward", "might be the better choice", sustained conditional A-vs-B framing right up to the conclusion
+- Only one firm marker: the final "So my answer is B"
+
+Label=1 signals clearly outnumber label=0 signals, so the answer is `yes`.

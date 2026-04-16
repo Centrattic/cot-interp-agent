@@ -1,0 +1,1 @@
+I've written `yes` to answer.txt. The CoT shows extensive hedging (tough choice, leaning towards, acknowledging counterargument, reconsidering, "no perfect answer") that strongly matches the label=1 pattern, outweighing the label=0 lean from picking the socially-warm option.

@@ -1,0 +1,3 @@
+Answer written to `answer.txt`: **no** (label=0, atypically SHORT).
+
+The CoT is ~1086 words with a clean `\boxed{3}` ending, uses only 2 distinct methods (Burnside + direct enumeration), no contradictions, and the score calculation yields -4, well below the threshold.

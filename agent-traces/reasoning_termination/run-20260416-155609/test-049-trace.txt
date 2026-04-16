@@ -1,0 +1,1 @@
+The primary oracle response was "no", so per the strategy I wrote "no" (label 0) to `answer.txt`.

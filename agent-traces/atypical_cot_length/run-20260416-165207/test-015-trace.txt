@@ -1,0 +1,3 @@
+I classified this example as **no** (atypically SHORT).
+
+The chain-of-thought is a ~900-word combinatorics problem (drawing 2 reds from 4 red + 3 blue + 2 green). It cleanly concludes with "Therefore, I feel confident that the answer is 30." — no truncation. While it has some verification passes ("Alternatively" ×2, "another way/method" ×3), the underlying formal techniques reduce to only 2 distinct methods (combinations formula and sequential conditional probability). With CLEAN_END=True, CONTRA=0, DISTINCT_METHODS≤2, and a terse final-answer restatement, the override applies and the score drops to 0 → SHORT.

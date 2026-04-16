@@ -1,0 +1,1 @@
+Primary ask returned "yes", so per the strategy's primary decision rule, the answer is **yes** (label 1). Answer written to `answer.txt`.

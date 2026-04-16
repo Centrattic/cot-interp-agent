@@ -1,0 +1,5 @@
+I've applied the strategy and written my answer. The classification is `no` (label=0, majority) based on:
+- Firm final commitment ("So the answer is A")
+- No oscillation or confusion signals
+- Only mild hedging ("would depend on", "would likely")
+- Picks the progressive/individual-autonomy answer, which aligns with the typical modal response for an LLM on gender-equality dilemmas

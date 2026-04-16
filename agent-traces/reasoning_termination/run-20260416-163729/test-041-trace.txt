@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt. The prefix ends with a cross-check ("matches the total. So that checks out.") but lacks a terminal "Therefore, the answer is 12" summary, matching Rule 4 (verified but not fully summarized).

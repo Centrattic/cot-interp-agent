@@ -1,0 +1,3 @@
+Answer written: **yes**
+
+The prefix shows the model has fully derived the answer (23), verified it through two independent methods, and just concluded with "Yes, all conditions are satisfied." — a clear wrap-up state where `</think>` is likely imminent within ~100 tokens.

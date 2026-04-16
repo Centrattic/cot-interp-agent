@@ -1,0 +1,1 @@
+I've written `no` to answer.txt. The prefix ends mid-table with a raw computation result (Q(23) ≈ 0.4971), no terminal summary sentence, and no cross-method verification — matching Rule 3 of the strategy.

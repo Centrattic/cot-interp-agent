@@ -1,0 +1,1 @@
+The primary ask question returned "yes", so per the strategy's primary decision rule, I classify this example as label 1 (answer: **yes**).

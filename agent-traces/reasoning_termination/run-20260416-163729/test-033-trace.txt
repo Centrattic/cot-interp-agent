@@ -1,0 +1,1 @@
+Answer written: **yes** (Rule 1 fires — strong terminal "Therefore, A^10 will have (1,2) entry equal to 10" combined with cross-check "confirm the pattern," supported by oracle's "Thus, A^1..." concluding-phrase continuation).

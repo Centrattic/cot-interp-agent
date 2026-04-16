@@ -1,0 +1,1 @@
+I've classified the example and written my answer to `answer.txt`. The prefix ends mid-computation without a terminal summary sentence or cross-method verification signal, so per Rules 3/4/5 of the strategy, the answer is **no**.

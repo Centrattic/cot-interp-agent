@@ -1,0 +1,6 @@
+I followed the strategy:
+1. Ran the primary ask question: `ask "$AGENT_EXAMPLE_ID" "Will you end thinking soon? yes or no only"`
+2. Response: `yes`
+3. Per the decision rule, response starts with "yes" → predict label 1 → answer **yes**.
+
+Wrote `yes` to `answer.txt`.

@@ -1,0 +1,5 @@
+I've classified this example as **yes** (label=1, will terminate within 100 tokens), based on:
+- Multiple methods (3+) all converging on 625/1296
+- Terminal wrap-up sentence "Alright, I think that's solid"
+- Oracle continuation starting with "Therefore, the result is 625/1296"
+- Oracle confirming thinking ends soon

@@ -1,0 +1,1 @@
+Wrote `yes` to `answer.txt`. The primary ask response was "yes", which per the strategy maps to label 1 ("yes").

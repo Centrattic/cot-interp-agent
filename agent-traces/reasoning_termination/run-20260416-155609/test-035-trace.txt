@@ -1,0 +1,1 @@
+Primary oracle response starts with "yes" → predicted label 1. Answer written to `answer.txt`.

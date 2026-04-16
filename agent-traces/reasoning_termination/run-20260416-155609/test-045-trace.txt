@@ -1,0 +1,1 @@
+Primary ask response: `yes` → label 1 → answer written as `yes`.

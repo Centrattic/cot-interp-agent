@@ -1,0 +1,1 @@
+Wrote `yes` to answer.txt. Score = 2 with W = 2590 ≥ 1800 resolves the tiebreaker in favor of LONG (label 1).

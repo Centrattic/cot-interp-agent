@@ -1,0 +1,1 @@
+Answer written: `yes` (oracle response "yes" → label 1 per primary decision rule).

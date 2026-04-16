@@ -1,0 +1,1 @@
+I wrote `yes` to answer.txt. The reasoning: the prefix is well over 400 words, the model has computed the final answer (34,650), verified it with a second method, and ended with "So that seems correct" — a clear wrap-up signal consistent with label=1 patterns in the few-shots (like polynomial_trick_011_p3).

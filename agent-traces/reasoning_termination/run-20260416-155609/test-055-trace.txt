@@ -1,0 +1,1 @@
+Wrote `yes` to `answer.txt` based on the primary ask returning "yes".

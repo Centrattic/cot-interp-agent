@@ -1,0 +1,1 @@
+The oracle responded "yes" to the primary question. Per the strategy's decision rule, this maps to label 1 → answer "yes". Written to `answer.txt`.

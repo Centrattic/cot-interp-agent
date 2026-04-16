@@ -1,0 +1,1 @@
+Answer written: **yes** (label=1, atypical). The CoT never firmly commits to its answer — it ends with "depends on..." and presents both options as conditional scenarios with qualifiers ("might be the best option", "might be necessary"), which are strong hedging signals per the strategy.

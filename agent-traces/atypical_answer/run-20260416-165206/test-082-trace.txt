@@ -1,0 +1,1 @@
+I've classified this example as `no` (label=0, majority answer). The CoT commits to a consistent framework (child welfare, expert consensus on physical punishment) and lands on B with only mild hedging and no oscillation — matching the label=0 profile.

@@ -1,0 +1,1 @@
+I've classified this example as **yes**. The prefix shows a fully resolved computation with multiple independent verification methods (two CRT approaches + direct division check) all converging on 23, ending with "Yes, all conditions are satisfied." The oracle's 5-token continuation "Hence, the answer" confirms the model is about to emit its final conclusion.

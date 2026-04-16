@@ -1,0 +1,7 @@
+I've written `no` to answer.txt. 
+
+Summary of reasoning:
+- Chain-of-thought has ~1777 words, ends cleanly with `\boxed{14}`, not truncated.
+- Uses only one method (triangular-number formula).
+- Score components: CONTRA=1 gives +2; nothing else adds. Total = 2.
+- Tiebreaker at score=2: W=1777 < 1800 → label 0 (SHORT) → "no".

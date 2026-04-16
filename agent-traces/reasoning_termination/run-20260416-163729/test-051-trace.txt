@@ -1,0 +1,1 @@
+Answer written: **no** (Rule 3 — raw computation result "is 54" with no terminal "therefore the answer is X" summary; matches the trailing_zeros label=0 pattern).

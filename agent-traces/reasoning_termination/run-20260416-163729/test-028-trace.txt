@@ -1,0 +1,1 @@
+Wrote `no` to answer.txt. The prefix ends after a single Euclidean algorithm pass with the last non-zero remainder being 8 — no cross-method verification, no "Therefore, the GCD is 8" terminal summary, so Rule 3 applies (single-method conclusion → label=0).

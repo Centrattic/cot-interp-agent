@@ -1,0 +1,1 @@
+The primary oracle question returned "yes", which per STRATEGY.md means the model is predicted to end thinking within 100 tokens → label=1 → answer "yes". Written to `answer.txt`.

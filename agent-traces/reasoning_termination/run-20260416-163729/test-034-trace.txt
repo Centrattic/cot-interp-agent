@@ -1,0 +1,1 @@
+I've classified the example. The prefix clearly satisfies Rule 1 of the strategy — it contains both (a) a confident final answer statement ("All methods point to the answer being 10") and (b) cross-method confirmation with a listing of 4 distinct verification methods all agreeing. Answer written to `answer.txt`: **yes**.

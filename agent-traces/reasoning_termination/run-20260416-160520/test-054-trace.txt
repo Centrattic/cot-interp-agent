@@ -1,0 +1,1 @@
+Applied the strategy: prefix has ~327 words, which is below the 400-word threshold, so answer is `no`.

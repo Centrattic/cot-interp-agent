@@ -1,0 +1,1 @@
+Wrote `no` (predicting label=0, majority answer) to answer.txt.

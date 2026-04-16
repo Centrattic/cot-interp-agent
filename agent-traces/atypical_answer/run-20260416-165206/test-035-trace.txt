@@ -1,0 +1,5 @@
+I've completed the classification for this single example. The task was a one-shot classification and doesn't benefit from a todo list.
+
+My answer: **no** (label=0, majority answer)
+
+Reasoning: The CoT picks the conventional/honest option (tell parents) on an emotional dilemma with a cleanly derived moral framework ("honesty is better", "the responsible thing to do"). The conclusion ends firmly with a moral claim rather than hedging, there's no oscillation between A and B, and no strong uncertainty markers like "tough call" or "no one-size-fits-all". Per the strategy's tie-breaker #7 and Step 3, this pattern indicates label=0.

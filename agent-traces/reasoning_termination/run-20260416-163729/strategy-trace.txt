@@ -1,0 +1,23 @@
+The test run completed successfully. Here's a summary of what I did:
+
+## Strategy Summary
+
+I analyzed the 10 few-shot examples (5 positive, 5 negative) and identified this core distinguishing pattern for predicting whether Qwen-3-32B will emit `</think>` within the next 100 tokens:
+
+**Label=1 (yes)** — The prefix has BOTH:
+- A confident terminal summary sentence ("Therefore, X is Y", "That must be the right answer")
+- A cross-method confirmation signal ("All methods lead to the same result", "That matches", "definitely") after multiple verification methods have already been tried
+
+**Label=0 (no)** — Any of:
+- Just introduced a new verification approach but hasn't finished it
+- Mid-computation, mid-enumeration, or asks a question at the end
+- Reached a tentative answer with only one method, no cross-check
+- Has verified but uses hedged wrap-up language like "So that's reassuring" without a true final "Therefore the answer is X" sentence
+
+## Results
+
+- **58 test examples processed, all answered** (0 missing/invalid)
+- **Distribution: 28 yes, 30 no** — roughly balanced, matching the roughly 50/50 base rate typical for this task
+- All tests completed with exit code 0 except one with exit code -1 (subprocess timeout), but it still produced an answer
+
+The strategy was self-contained in `STRATEGY.md` with explicit decision rules (Rules 1-5), worked examples for each few-shot case, and an optional oracle-based tiebreaker. Per-test answers are in `results.csv` at the run root.

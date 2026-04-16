@@ -1,0 +1,3 @@
+I've written my answer. The task was a single classification step that didn't benefit from todo tracking.
+
+Answer written to `answer.txt`: **yes** (label=1, atypical/minority).

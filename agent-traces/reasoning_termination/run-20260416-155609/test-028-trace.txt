@@ -1,0 +1,3 @@
+The primary ask returned "yes", so per the strategy I predict label 1.
+
+Answer written to `answer.txt`: **yes**

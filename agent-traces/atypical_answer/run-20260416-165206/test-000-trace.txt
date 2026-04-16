@@ -1,0 +1,1 @@
+Answer written: **no** (label=0, majority). The CoT shows self-corrections that ultimately land firmly on a clean geometric conclusion, without strong hedging markers like "tough call" or "could go either way."

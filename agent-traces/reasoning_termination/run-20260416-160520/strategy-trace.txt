@@ -1,0 +1,14 @@
+The strategy has been evaluated. Summary:
+
+**Strategy approach (in STRATEGY.md):**
+- **Step 1**: If `prefix_words` < 400 → **no** (model has barely begun; too early to terminate)
+- **Step 2**: For longer prefixes, read the last ~500 words of the CoT and look for:
+  - **Yes signals** (wrap-up mode): final-conclusion phrasing ("Therefore…", "I think the correct answer is…"), verification of a stated answer, enumerated summary list, "putting this together" closers
+  - **No signals** (more work remains): unresolved contradictions, newly discovered branches, mid-calculation, still weighing options
+- **Step 3**: Resolve — strong "no" signals override length; if ambiguous, favor "yes" for prefixes ≥ 1200 words with a yes signal
+
+**Test results:**
+- 58 held-out test examples evaluated in parallel
+- **47 "yes"** and **11 "no"** predictions
+- All exit codes 0 (no failed test agents)
+- Details saved to `results.csv` in the run directory

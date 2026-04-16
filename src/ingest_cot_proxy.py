@@ -252,15 +252,22 @@ def write_items(items: list[tuple[Path, dict]], dst_dir: Path) -> int:
 # Main
 # ---------------------------------------------------------------------------
 
-def ingest(preset_name: str, few_shot_per_class: int, test_n: int | None, seed: int):
+def ingest(
+    preset_name: str,
+    few_shot_per_class: int,
+    test_n: int | None,
+    seed: int,
+    few_shot_split: str = "train",
+    test_split: str = "test",
+):
     if preset_name not in TASK_PRESETS:
         print(f"Unknown preset: {preset_name}. Available: {sorted(TASK_PRESETS)}")
         sys.exit(1)
     preset = TASK_PRESETS[preset_name]
 
     source = COT_PROXY_ROOT / preset["dataset_id"] / preset["model"]
-    train_dir = source / "train"
-    test_dir = source / "test"
+    train_dir = source / few_shot_split
+    test_dir = source / test_split
     if not train_dir.is_dir() or not test_dir.is_dir():
         print(f"Error: missing {train_dir} or {test_dir}")
         sys.exit(1)
@@ -302,6 +309,8 @@ def ingest(preset_name: str, few_shot_per_class: int, test_n: int | None, seed: 
         # Cast tuple keys to strings for JSON serialization
         "label_map": {str(k): int(v) for k, v in label_map.items()},
         "test_keep_fields": list(preset["test_keep_fields"]),
+        "few_shot_split": few_shot_split,
+        "test_split": test_split,
         "few_shot_per_class": few_shot_per_class,
         "test_n": test_n,
         "seed": seed,
@@ -319,6 +328,12 @@ def main():
     p.add_argument("--test-n", type=int, default=None,
                    help="Cap test-set size (balanced); default = all")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--few-shot-split", default="train",
+                   help="Which source subdir to sample few-shot from "
+                        "(default: train). Use 'val' when val's distribution "
+                        "matches test better.")
+    p.add_argument("--test-split", default="test",
+                   help="Which source subdir to copy test examples from (default: test)")
     args = p.parse_args()
 
     if args.list_presets:
@@ -329,7 +344,10 @@ def main():
     if not args.preset:
         p.error("--preset is required (or use --list-presets)")
 
-    ingest(args.preset, args.few_shot_per_class, args.test_n, args.seed)
+    ingest(
+        args.preset, args.few_shot_per_class, args.test_n, args.seed,
+        few_shot_split=args.few_shot_split, test_split=args.test_split,
+    )
 
 
 if __name__ == "__main__":

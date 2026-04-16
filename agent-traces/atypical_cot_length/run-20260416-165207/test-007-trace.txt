@@ -1,0 +1,1 @@
+Answer written: **yes** (predicted LONG based on score=3 driven by APPROACH=4 and ALT=3 in a 1980-word rollout that repeatedly explores alternative crossing sequences).

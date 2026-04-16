@@ -1,0 +1,1 @@
+Primary ask returned "yes" → predict label 1 → answer written as "yes".

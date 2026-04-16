@@ -1,0 +1,3 @@
+I've written my answer to `answer.txt`: **yes** (label=1, atypical/minority answer).
+
+The CoT contains strong hedging signals throughout and in the conclusion ("might be", "probably", "maybe", "I'm still a bit conflicted"), oscillates between the options, and never commits cleanly — matching the label=1 pattern per STRATEGY.md.

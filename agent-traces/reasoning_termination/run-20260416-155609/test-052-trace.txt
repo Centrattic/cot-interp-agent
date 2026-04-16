@@ -1,0 +1,1 @@
+The primary ask oracle returned "yes", so per the strategy I predict label 1 and wrote `yes` to `answer.txt`.

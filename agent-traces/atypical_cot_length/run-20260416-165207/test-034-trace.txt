@@ -1,0 +1,6 @@
+I applied the strategy:
+- Measured `W = 3798` words for the chain_of_thought
+- The CoT ends cleanly ("Therefore, the correct answer is 19.") — not truncated
+- Hard rule 2 fires: `W > 3500` → label = 1 (LONG) → **yes**
+
+Answer written to `answer.txt`: `yes`

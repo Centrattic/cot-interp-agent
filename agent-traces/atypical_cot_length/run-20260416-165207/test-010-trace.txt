@@ -1,0 +1,1 @@
+Classification: **no** (SHORT). Word count 917, with 1 contradiction marker but no multi-method verification and no other LONG signals; score=2 with W<1800 → label 0.

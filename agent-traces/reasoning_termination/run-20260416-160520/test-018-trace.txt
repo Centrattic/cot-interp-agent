@@ -1,0 +1,3 @@
+The answer has been written to answer.txt: **yes**
+
+The example shows the model has derived the answer (23), verified it satisfies all three congruence conditions, and ended with the wrap-up statement "So 23 satisfies all three conditions." This pattern matches multiple strong "yes" signals in the strategy (final numerical answer stated and verified, wrap-up phrasing), with no "no" signals present.

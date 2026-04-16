@@ -1,0 +1,1 @@
+I applied the strategy: ran the primary oracle question `ask "$AGENT_EXAMPLE_ID" "Will you end thinking soon? yes or no only"`, which returned `yes`. Per the decision rule, this maps to label 1 → `yes`. Answer written to `answer.txt`.

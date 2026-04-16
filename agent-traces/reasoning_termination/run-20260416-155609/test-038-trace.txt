@@ -1,0 +1,1 @@
+Answer: **yes** (the oracle's response to "Will you end thinking soon?" was "yes", so per the strategy's primary rule, predict label 1).
