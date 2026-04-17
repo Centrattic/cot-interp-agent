@@ -73,15 +73,23 @@ def load_task_metadata(task_name: str) -> dict:
     return {"name": task_name, "description": f"Classification task: {task_name}"}
 
 
+def _apply_whitelist(data: dict, test_keep_fields: list[str] | None) -> dict:
+    """Keep only whitelisted fields plus `label` (few-shot retains label for GT)."""
+    if not test_keep_fields:
+        return data
+    filtered = {k: data[k] for k in test_keep_fields if k in data}
+    if "label" in data:
+        filtered["label"] = data["label"]
+    return filtered
+
+
 def populate_few_shot(
     task_name: str,
     strategy_dir: Path,
     test_keep_fields: list[str] | None = None,
 ) -> list[dict]:
-    """Write few-shot JSONs into strategy/few-shot/ using the SAME whitelist
-    the test agent sees, plus the `label` field (which the strategy agent needs
-    as ground truth). This prevents the strategy agent from building strategies
-    that rely on fields the test agent won't have.
+    """Legacy single-run mode: copy data/<task>/few-shot/ (already-sampled at ingest
+    time) into strategy/few-shot/ with the whitelist applied.
 
     Returns a list of {id, label, path} entries (used for Examples.csv).
     """
@@ -98,13 +106,7 @@ def populate_few_shot(
     for json_file in sorted(src_dir.glob("*.json")):
         with open(json_file, encoding="utf-8") as f:
             data = json.load(f)
-        if test_keep_fields:
-            # Keep only the fields the test agent will see, plus `label`.
-            filtered = {k: data[k] for k in test_keep_fields if k in data}
-            if "label" in data:
-                filtered["label"] = data["label"]
-        else:
-            filtered = data
+        filtered = _apply_whitelist(data, test_keep_fields)
         with open(dst_dir / json_file.name, "w", encoding="utf-8") as f:
             json.dump(filtered, f, indent=2, ensure_ascii=False)
         index.append({
@@ -112,19 +114,75 @@ def populate_few_shot(
             "label": data.get("label", ""),
             "path": f"few-shot/{json_file.name}",
         })
-        # Copy companion .npy if present (kept for all agents regardless of whitelist)
         npy = src_dir / f"{json_file.stem}.npy"
         if npy.exists():
             shutil.copy2(npy, dst_dir / npy.name)
 
-    with open(strategy_dir / "Examples.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["id", "label", "path"])
-        writer.writeheader()
-        writer.writerows(index)
+    _write_examples_csv(strategy_dir, index)
 
     wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
     print(f"Wrote {len(index)} few-shot examples into {dst_dir}{wl}")
     return index
+
+
+def populate_few_shot_from_source(
+    task_meta: dict,
+    strategy_dir: Path,
+    seed: int,
+    per_class: int,
+    test_keep_fields: list[str] | None,
+) -> list[dict]:
+    """Multi-partition mode: sample a fresh balanced few-shot set directly from the
+    cot-proxy-tasks source split (per metadata.few_shot_split). Different `seed`
+    values → different sampled sets per partition.
+
+    Requires metadata.json to have `source`, `few_shot_split`, and `label_map`.
+    """
+    source = Path(task_meta["source"])
+    split = task_meta.get("few_shot_split", "train")
+    src_dir = source / split
+    if not src_dir.is_dir():
+        raise RuntimeError(
+            f"Source few-shot split not found: {src_dir}. "
+            "Multi-partition requires metadata.json with 'source' and 'few_shot_split'."
+        )
+
+    # Parse label_map. JSON keys are always strings; normalize back to int where applicable.
+    raw_label_map = task_meta.get("label_map", {})
+    def _key(k):
+        try: return int(k)
+        except (ValueError, TypeError): return k
+    label_map = {_key(k): int(v) for k, v in raw_label_map.items()}
+
+    # Import sampler from ingest_cot_proxy (co-located in src/)
+    from ingest_cot_proxy import sample_balanced
+    picked = sample_balanced(src_dir, per_class, seed, label_map)
+
+    dst_dir = strategy_dir / "few-shot"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    index = []
+    for src_path, data in picked:
+        filtered = _apply_whitelist(data, test_keep_fields)
+        with open(dst_dir / src_path.name, "w", encoding="utf-8") as f:
+            json.dump(filtered, f, indent=2, ensure_ascii=False)
+        index.append({
+            "id": src_path.stem,
+            "label": data["label"],
+            "path": f"few-shot/{src_path.name}",
+        })
+
+    _write_examples_csv(strategy_dir, index)
+    wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
+    print(f"Sampled {len(index)} few-shot from {split}/ (seed={seed}){wl}")
+    return index
+
+
+def _write_examples_csv(strategy_dir: Path, index: list[dict]) -> None:
+    with open(strategy_dir / "Examples.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "label", "path"])
+        writer.writeheader()
+        writer.writerows(index)
 
 
 TOOL_DESCRIPTIONS = {
@@ -206,74 +264,37 @@ Running `test` evaluates your current strategy against all held-out test example
     (run_dir / "strategy" / "README.md").write_text(readme, encoding="utf-8")
 
 
-def create_run(task_name: str, description: str | None = None, tools: list[str] | None = None):
-    """Create a new agent run for a task and launch the strategy agent."""
-    task_dir = DATA_DIR / task_name
-    if not task_dir.exists():
-        print(f"Error: Task '{task_name}' not found in {DATA_DIR}")
-        sys.exit(1)
+def _write_bashrc(
+    bashrc_path: Path,
+    run_dir: Path,
+    task_name: str,
+    run_id: str,
+    extra_exports: dict[str, str] | None = None,
+) -> None:
+    """Write the per-agent bash environment file sourced via BASH_ENV."""
+    lines = [
+        "# Auto-generated bash environment for agent run",
+        f'export SCAFFOLD_ROOT="{ROOT.as_posix()}"',
+        f'export AGENT_RUN_DIR="{run_dir.as_posix()}"',
+        f'export AGENT_TASK="{task_name}"',
+        f'export AGENT_RUN_ID="{run_id}"',
+        f'export PATH="{BIN_DIR.as_posix()}:$PATH"',
+        f'export PYTHON="{Path(sys.executable).as_posix()}"',
+    ]
+    for k, v in (extra_exports or {}).items():
+        lines.append(f'export {k}="{v}"')
+    bashrc_path.write_text("\n".join(lines) + "\n")
 
-    tools = list(tools or [])
 
-    # Create run directory. Per-test folders are created later by run_tests.py as
-    # siblings of strategy/ (test-000/, test-001/, ...).
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_dir = RUNS_DIR / task_name / f"run-{run_id}"
-    strategy_dir = run_dir / "strategy"
-    trace_dir = TRACES_DIR / task_name / f"run-{run_id}"
-
-    for d in [strategy_dir, trace_dir]:
-        d.mkdir(parents=True, exist_ok=True)
-
-    # Load task metadata
-    task_meta = load_task_metadata(task_name)
-    if description:
-        task_meta["description"] = description
-
-    # Populate few-shot workspace. The strategy agent sees the SAME field
-    # whitelist the test agent sees, so it can't learn features that get
-    # stripped at test time. `label` is additionally kept for ground truth.
-    examples_index = populate_few_shot(
-        task_name, strategy_dir, test_keep_fields=task_meta.get("test_keep_fields"),
-    )
-
-    # Generate task-and-toolset-specific README
-    generate_readme(task_meta, tools, examples_index, run_dir)
-    (strategy_dir / "STRATEGY.md").write_text(
-        "# Strategy\n\n<!-- Write your classification strategy here -->\n"
-    )
-
-    # Save run metadata
-    run_meta = {
-        "task": task_name,
-        "run_id": run_id,
-        "created": datetime.now().isoformat(),
-        "status": "running",
-        "tools": tools,
-        "task_meta": task_meta,
-    }
-    with open(run_dir / "run.json", "w") as f:
-        json.dump(run_meta, f, indent=2)
-
-    print(f"Created run: {run_dir}")
-    print(f"Traces: {trace_dir}")
-
-    # Build the agent.bashrc with run-specific env vars
-    bashrc_path = run_dir / "agent.bashrc"
-    # Pin the tool interpreter to whichever python ran the scaffold, so
-    # bin/* wrappers use the same venv (e.g. the uv riya-env) rather than
-    # whatever `python3` happens to resolve to on PATH.
-    bashrc_content = f"""# Auto-generated bash environment for agent run
-export SCAFFOLD_ROOT="{ROOT.as_posix()}"
-export AGENT_RUN_DIR="{run_dir.as_posix()}"
-export AGENT_TASK="{task_name}"
-export AGENT_RUN_ID="{run_id}"
-export PATH="{BIN_DIR.as_posix()}:$PATH"
-export PYTHON="{Path(sys.executable).as_posix()}"
-"""
-    bashrc_path.write_text(bashrc_content)
-
-    # Launch Claude Code non-interactively
+def _launch_strategy_agent(
+    strategy_dir: Path,
+    trace_base: Path,
+    bashrc_path: Path,
+    label: str = "",
+) -> int:
+    """Run one strategy-agent claude subprocess in strategy_dir. Writes
+    trace_base.jsonl / .txt. Returns exit code.
+    """
     strategy_prompt_path = PROMPTS_DIR / "strategy-agent.md"
     if not strategy_prompt_path.exists():
         print(f"Error: Strategy prompt not found at {strategy_prompt_path}")
@@ -284,53 +305,213 @@ export PYTHON="{Path(sys.executable).as_posix()}"
         "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
         "and run `test` when ready."
     )
-
-    # Do NOT pass --add-dir to the raw task dir: the strategy agent must not
-    # read data/<task>/test/ (those JSONs still contain the ground-truth label).
-    # Few-shot examples are already copied into strategy/few-shot/.
-    #
-    # --allowed-tools and --add-dir are variadic (<tools...>, <directories...>) in the
-    # claude CLI: they greedily consume trailing positional args. So we pass the user
-    # prompt via stdin instead of as a positional argument.
     system_prompt = strategy_prompt_path.read_text(encoding="utf-8")
     cmd = [
-        "claude",
-        "--print",
-        "--dangerously-skip-permissions",
+        "claude", "--print", "--dangerously-skip-permissions",
+        "--output-format", "stream-json", "--verbose",
         "--system-prompt", system_prompt,
         "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
     ]
-
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "strategy"
 
-    print(f"Launching strategy agent for {task_name}...")
-    trace_file = trace_dir / "strategy-trace.txt"
+    tag = f" [{label}]" if label else ""
+    print(f"Launching strategy agent{tag}...")
+    result = subprocess.run(
+        cmd,
+        cwd=str(strategy_dir),
+        env=env,
+        input=user_prompt,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+    )
+    from render_trace import write_trace_pair
+    write_trace_pair(result.stdout, trace_base)
+    print(f"Strategy agent{tag} finished (exit code {result.returncode})")
+    return result.returncode
 
-    with open(trace_file, "w", encoding="utf-8") as trace_out:
-        result = subprocess.run(
-            cmd,
-            cwd=str(strategy_dir),
-            env=env,
-            input=user_prompt,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
+
+def create_run(
+    task_name: str,
+    description: str | None = None,
+    tools: list[str] | None = None,
+    n_strategies: int = 1,
+    strategy_seed_base: int = 0,
+    few_shot_per_class: int | None = None,
+):
+    """Create a new agent run.
+
+    If n_strategies == 1: legacy layout (run-<ts>/strategy/, run-<ts>/test-NNN/).
+    If n_strategies > 1: partition layout (run-<ts>/partition-NNN/{strategy/, test-NNN/}).
+      Each partition gets a freshly-sampled few-shot set (seed = strategy_seed_base + k)
+      drawn from the cot-proxy-tasks source split, and runs the k-th round-robin
+      slice of the test set.
+    """
+    task_dir = DATA_DIR / task_name
+    if not task_dir.exists():
+        print(f"Error: Task '{task_name}' not found in {DATA_DIR}")
+        sys.exit(1)
+
+    tools = list(tools or [])
+    task_meta = load_task_metadata(task_name)
+    if description:
+        task_meta["description"] = description
+    fspc = few_shot_per_class if few_shot_per_class is not None else \
+        int(task_meta.get("few_shot_per_class", 5))
+
+    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir = RUNS_DIR / task_name / f"run-{run_id}"
+    trace_dir = TRACES_DIR / task_name / f"run-{run_id}"
+    trace_dir.mkdir(parents=True, exist_ok=True)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    run_meta = {
+        "task": task_name,
+        "run_id": run_id,
+        "created": datetime.now().isoformat(),
+        "status": "running",
+        "tools": tools,
+        "n_strategies": n_strategies,
+        "strategy_seed_base": strategy_seed_base,
+        "task_meta": task_meta,
+    }
+    with open(run_dir / "run.json", "w") as f:
+        json.dump(run_meta, f, indent=2)
+
+    print(f"Created run: {run_dir}  (n_strategies={n_strategies})")
+    print(f"Traces: {trace_dir}")
+
+    if n_strategies == 1:
+        _setup_partition(
+            run_dir=run_dir, task_name=task_name, task_meta=task_meta, tools=tools,
+            partition_idx=0, n_partitions=1,
+            strategy_dir=run_dir / "strategy",
+            bashrc_path=run_dir / "agent.bashrc",
+            seed=None, few_shot_per_class=fspc, from_source=False,
         )
-        trace_out.write(result.stdout)
+        trace_base = trace_dir / "strategy-trace"
+        code = _launch_strategy_agent(
+            strategy_dir=run_dir / "strategy",
+            trace_base=trace_base,
+            bashrc_path=run_dir / "agent.bashrc",
+        )
+        run_meta["status"] = "completed" if code == 0 else "failed"
+    else:
+        # Multi-partition: set up N partition dirs, launch their strategy agents in parallel.
+        max_parallel = int(os.environ.get("AGENT_STRATEGY_PARALLEL", "10"))
+        partition_launch_jobs = []
+        for k in range(n_strategies):
+            part_dir = run_dir / f"partition-{k:03d}"
+            part_bashrc = part_dir / "agent.bashrc"
+            _setup_partition(
+                run_dir=run_dir, task_name=task_name, task_meta=task_meta, tools=tools,
+                partition_idx=k, n_partitions=n_strategies,
+                strategy_dir=part_dir / "strategy",
+                bashrc_path=part_bashrc,
+                seed=strategy_seed_base + k, few_shot_per_class=fspc, from_source=True,
+            )
+            partition_launch_jobs.append((
+                part_dir / "strategy",
+                trace_dir / f"partition-{k:03d}-strategy-trace",
+                part_bashrc,
+                f"partition-{k:03d}",
+            ))
 
-    # Update run status
-    run_meta["status"] = "completed" if result.returncode == 0 else "failed"
+        # Launch strategy agents concurrently
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        exit_codes = {}
+        with ThreadPoolExecutor(max_workers=min(max_parallel, n_strategies)) as ex:
+            futures = {
+                ex.submit(_launch_strategy_agent, sd, tb, br, lbl): lbl
+                for (sd, tb, br, lbl) in partition_launch_jobs
+            }
+            for fut in as_completed(futures):
+                lbl = futures[fut]
+                try:
+                    exit_codes[lbl] = fut.result()
+                except Exception as e:
+                    print(f"{lbl}: FAILED with {e}")
+                    exit_codes[lbl] = -1
+
+        all_ok = all(c == 0 for c in exit_codes.values())
+        run_meta["status"] = "completed" if all_ok else "partial"
+        run_meta["partition_exit_codes"] = exit_codes
+
+        # Aggregate scoring (writes results.csv + summary.txt at run_dir)
+        try:
+            from score_run import score_partitioned_run
+            score_partitioned_run(run_dir, task_meta)
+        except Exception as e:
+            print(f"Note: aggregate scoring skipped/failed: {e}")
+
     run_meta["finished"] = datetime.now().isoformat()
     with open(run_dir / "run.json", "w") as f:
         json.dump(run_meta, f, indent=2)
 
-    print(f"Strategy agent finished (exit code {result.returncode})")
-    print(f"Trace saved to {trace_file}")
-
     return run_dir
+
+
+def _setup_partition(
+    *,
+    run_dir: Path,
+    task_name: str,
+    task_meta: dict,
+    tools: list[str],
+    partition_idx: int,
+    n_partitions: int,
+    strategy_dir: Path,
+    bashrc_path: Path,
+    seed: int | None,
+    few_shot_per_class: int,
+    from_source: bool,
+) -> list[dict]:
+    """Create one partition's strategy workspace + bashrc."""
+    strategy_dir.mkdir(parents=True, exist_ok=True)
+
+    if from_source:
+        examples_index = populate_few_shot_from_source(
+            task_meta=task_meta,
+            strategy_dir=strategy_dir,
+            seed=seed if seed is not None else 0,
+            per_class=few_shot_per_class,
+            test_keep_fields=task_meta.get("test_keep_fields"),
+        )
+    else:
+        examples_index = populate_few_shot(
+            task_name, strategy_dir, test_keep_fields=task_meta.get("test_keep_fields"),
+        )
+
+    generate_readme(task_meta, tools, examples_index, strategy_dir.parent)
+    (strategy_dir / "STRATEGY.md").write_text(
+        "# Strategy\n\n<!-- Write your classification strategy here -->\n"
+    )
+
+    # Partition run.json (for inspection/debug)
+    part_meta = {
+        "task": task_name,
+        "partition_idx": partition_idx,
+        "n_partitions": n_partitions,
+        "seed": seed,
+        "few_shot_per_class": few_shot_per_class,
+    }
+    with open(strategy_dir.parent / "partition.json", "w") as f:
+        json.dump(part_meta, f, indent=2)
+
+    # agent.bashrc — per-partition; AGENT_RUN_DIR points at the partition dir
+    _write_bashrc(
+        bashrc_path=bashrc_path,
+        run_dir=strategy_dir.parent,
+        task_name=task_name,
+        run_id=run_dir.name.replace("run-", ""),
+        extra_exports={
+            "AGENT_PARTITION_INDEX": str(partition_idx),
+            "AGENT_N_PARTITIONS": str(n_partitions),
+        },
+    )
+    return examples_index
 
 
 def show_status(run_id: str | None = None):
@@ -382,6 +563,20 @@ def main():
         default="",
         help="Comma-separated list of custom research tools to enable (default: empty)",
     )
+    run_parser.add_argument(
+        "--n-strategies", type=int, default=1,
+        help="Run N independent strategy agents on disjoint test partitions "
+             "(cross-val-style). N=1 uses the legacy single-strategy layout.",
+    )
+    run_parser.add_argument(
+        "--strategy-seed-base", type=int, default=0,
+        help="Partition k's few-shot is sampled with seed = strategy_seed_base + k "
+             "(only used when --n-strategies > 1).",
+    )
+    run_parser.add_argument(
+        "--few-shot-per-class", type=int, default=None,
+        help="Few-shot size per class per strategy. Default: inherit from metadata.",
+    )
 
     status_parser = sub.add_parser("status", help="Show run status")
     status_parser.add_argument("run_id", nargs="?", help="Filter by run ID")
@@ -392,7 +587,12 @@ def main():
         init()
     elif args.command == "run":
         tools = [t.strip() for t in args.tools.split(",") if t.strip()]
-        create_run(args.task_name, args.description, tools)
+        create_run(
+            args.task_name, args.description, tools,
+            n_strategies=args.n_strategies,
+            strategy_seed_base=args.strategy_seed_base,
+            few_shot_per_class=args.few_shot_per_class,
+        )
     elif args.command == "status":
         show_status(args.run_id)
     else:

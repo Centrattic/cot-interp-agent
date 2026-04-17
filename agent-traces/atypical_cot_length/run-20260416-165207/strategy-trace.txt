@@ -1,0 +1,32 @@
+The test evaluation completed. Here's the final result:
+
+## Results Summary
+
+**Accuracy: 63/100 = 63%**
+
+**Confusion matrix:**
+- LONG (label=1) correctly flagged as "yes": 27
+- SHORT (label=0) correctly flagged as "no": 36
+- SHORT misclassified as "yes": 14 (false positives)
+- LONG misclassified as "no": 23 (false negatives)
+
+**By-class recall:**
+- LONG recall: 54%
+- SHORT recall: 72%
+
+## Strategy Overview
+
+My STRATEGY.md uses surface features of the chain-of-thought to classify rollouts as atypically long or short, since we cannot see the model's typical distribution per prompt:
+
+1. **Hard rules:**
+   - Truncated / mid-thought ending → LONG
+   - Word count > 3500 → LONG
+   - Word count < 700 → SHORT
+
+2. **Scoring for middle-length rollouts** combines:
+   - Number of distinct formal methods used on the same problem (strongest LONG signal)
+   - Counts of "another approach/method/way" and "alternative"
+   - Presence of "contradiction/discrepancy"
+   - Length, plus negative adjustments for clean boxed-answer endings
+
+The strategy performed noticeably better on short examples (72% recall) than long ones (54%), suggesting the "truncated ending + length" heuristic catches extreme LONG cases but misses more moderate LONG rollouts that complete cleanly — those require richer content-based signals (e.g., semantic redundancy detection) that go beyond the lexical features I extracted.

@@ -90,11 +90,15 @@ def run_single_test(
 
     # --allowed-tools and --add-dir are variadic in the claude CLI, so they
     # greedily consume trailing positional args. Pass the user prompt via stdin.
+    # --output-format stream-json emits full turn-by-turn events; we write both
+    # the raw JSONL and a rendered .txt per test agent.
     system_prompt = prompt_path.read_text(encoding="utf-8")
     cmd = [
         "claude",
         "--print",
         "--dangerously-skip-permissions",
+        "--output-format", "stream-json",
+        "--verbose",  # required by --output-format stream-json
         "--system-prompt", system_prompt,
         "--add-dir", str(strategy_dir),
         "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
@@ -105,7 +109,7 @@ def run_single_test(
     env["AGENT_TYPE"] = "test"
     env["AGENT_EXAMPLE_ID"] = example["id"]
 
-    trace_file = trace_dir / f"test-{test_index:03d}-trace.txt"
+    trace_base = trace_dir / f"test-{test_index:03d}-trace"
 
     try:
         result = subprocess.run(
@@ -125,7 +129,8 @@ def run_single_test(
         stdout = (e.stdout or "") + f"\n\n[subprocess timed out after {e.timeout}s]"
         exit_code = -1
 
-    trace_file.write_text(stdout, encoding="utf-8")
+    from render_trace import write_trace_pair
+    write_trace_pair(stdout, trace_base)
 
     # Read answer
     answer_path = test_folder / "answer.txt"
@@ -164,7 +169,11 @@ def main():
 
     # Load task description and the test_keep_fields whitelist from run metadata
     # (populated by scaffold.py from data/<task>/metadata.json).
+    # In multi-partition mode AGENT_RUN_DIR is the partition dir, so look for
+    # run.json at its parent.
     run_meta_path = run_dir / "run.json"
+    if not run_meta_path.exists():
+        run_meta_path = run_dir.parent / "run.json"
     task_description = task_name
     test_keep_fields: list[str] | None = None
     if run_meta_path.exists():
@@ -181,7 +190,17 @@ def main():
         print("No test examples found.")
         return
 
-    print(f"Running {len(examples)} test(s) in parallel...")
+    # Round-robin partition slicing. Global sort order (by filename) is preserved;
+    # partition k runs examples at indices [k, k+N, k+2N, ...].
+    n_partitions = int(os.environ.get("AGENT_N_PARTITIONS", "1"))
+    partition_idx = int(os.environ.get("AGENT_PARTITION_INDEX", "0"))
+    if n_partitions > 1:
+        examples = [ex for i, ex in enumerate(examples) if i % n_partitions == partition_idx]
+        # Namespace trace files under a per-partition subdir
+        trace_dir = trace_dir / f"partition-{partition_idx:03d}"
+        print(f"Partition {partition_idx}/{n_partitions}: running {len(examples)} test(s) in parallel...")
+    else:
+        print(f"Running {len(examples)} test(s) in parallel...")
 
     trace_dir.mkdir(parents=True, exist_ok=True)
     results = []

@@ -1,0 +1,13 @@
+The strategy has been developed and tested successfully.
+
+## Summary
+
+**Task**: Classify chain-of-thought prefixes as to whether Qwen-3-32B will emit `</think>` within the next 100 tokens.
+
+**Strategy written to `STRATEGY.md`**:
+- Core intuition: Label=1 when the model has (1) already computed an answer, (2) verified it at least once via independent methods, AND (3) signaled closure on the final sentence(s).
+- Label=0 when the prefix is still mid-exploration, introducing a new verification pass, computing an intermediate value, or hedging.
+- Included concrete **YES cues** ("Therefore X", "All methods give X", "Same result", "That matches", "confirmed/definitely") and **NO cues** ("Let me check/verify", "But wait", "So yes, this works", mid-calculation endings).
+- Added a tie-breaker: when both types of cues appear, lean **no** (default state of a CoT is "still thinking").
+
+**Test results**: 58 test examples classified in parallel, all exit codes 0. Final distribution: 35 yes, 23 no. Details saved to `run-20260416-170803/results.csv`.

@@ -1,3 +1,4 @@
 data/
 agent-runs/
 .env
+agent-traces/

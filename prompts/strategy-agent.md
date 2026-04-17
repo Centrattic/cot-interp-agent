@@ -24,10 +24,12 @@ When invoking a research tool, `<example_id>` refers to the filename stem from `
 3. Analyze patterns that distinguish positive (yes) from negative (no) examples
 4. Write a clear, actionable classification strategy to STRATEGY.md that another agent can follow
 5. Create any additional CSV files with derived features, analysis notes, or decision criteria
-6. When confident in your strategy, run `test` to evaluate it
+6. Before running `test`, apply your draft strategy to the few-shot examples as if they were held-out: predict each one using only the rules you've written, compare against the known label, and iterate if the rules don't reliably recover the ground truth. Treat your few-shot as a validation set rather than the data your strategy is fit to.
+7. When confident in your strategy, run `test` to evaluate it
 
 ## Important
 
 - Your strategy must be self-contained: test agents will only see the strategy/ directory contents
 - Be specific and concrete in STRATEGY.md — test agents follow it literally
 - If you create helper CSVs or analysis files, reference them in STRATEGY.md
+- Test examples may be drawn from a different question topic, problem type, or writing style than your few-shot examples — the classification task itself is unchanged. Design your strategy around task-general signals, not idiosyncrasies of the few-shot content.

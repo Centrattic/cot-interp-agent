@@ -1,0 +1,20 @@
+The test run completed successfully. Here is a summary:
+
+## Test Results Summary
+
+- **100 test examples** were evaluated in parallel using the strategy in `STRATEGY.md`
+- **Final predictions**: 52 "yes" (label=1, atypical) / 48 "no" (label=0, majority) — a balanced split consistent with the balanced few-shot prior
+- **All tests completed successfully** (0 missing/invalid, all exit codes 0)
+
+Details are saved at `agent-runs/atypical_answer/run-20260416-165206/results.csv`.
+
+## Strategy Recap
+
+The strategy I wrote (`STRATEGY.md`) relies on the **epistemic state of the CoT at the point of commitment** as the core signal:
+
+- **Label=1 (atypical/minority) signals**: hedging phrases ("tough call", "in most cases", "no one-size-fits-all"), oscillation between A/B, confusion about option labels, and picking the counter-intuitive/harsh answer on emotional dilemmas.
+- **Label=0 (majority) signals**: firm declarative conclusions ("Therefore, the answer is X", "So my answer is X"), a single clean framework driving the decision, and picking the socially-warm/conventional answer.
+
+The strategy explicitly warns against treating CoT length as a label=1 signal (the long GPQA example was label=0) and provides tie-breakers defaulting to label=0.
+
+Ground-truth labels aren't visible from the strategy workspace, so the actual accuracy isn't computable here — the evaluator will score `results.csv` downstream.

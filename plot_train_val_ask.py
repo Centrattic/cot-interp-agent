@@ -23,11 +23,14 @@ REPO = Path(__file__).resolve().parent
 PLOTS_DIR = REPO / "plots"
 TASK = "reasoning_termination"
 
-# Three runs: (label, run_id, color)
+# Four runs: (label, run_id, color)
+BLUE_LIGHT   = "#BFC8F5"
+ORANGE_LIGHT = "#FBDBB8"
 RUNS = [
-    ("Base (no tools), train few-shot",   "run-20260416-160520", BLUE_DARK),
-    ("Ask tool, train few-shot",          "run-20260416-155609", ORANGE_DARK),
-    ("Ask tool, val few-shot",            "run-20260416-163729", GREEN_DARK),
+    ("No tools, train few-shot",   "run-20260416-160520", BLUE_LIGHT),
+    ("Ask tool, train few-shot",   "run-20260416-155609", ORANGE_LIGHT),
+    ("No tools, val few-shot",     "run-20260416-170803", BLUE_DARK),
+    ("Ask tool, val few-shot",     "run-20260416-163729", ORANGE_DARK),
 ]
 
 
@@ -112,11 +115,11 @@ def main():
 
     N = len(groups)
     R = len(scored)
-    fig, ax = plt.subplots(figsize=(N * 1.9 + 1.8, 5.0))
+    fig, ax = plt.subplots(figsize=(N * 2.2 + 1.8, 5.2))
 
     x = np.arange(N) * 1.0
-    bar_w = 0.22
-    gap = 0.03
+    bar_w = 0.17
+    gap = 0.025
     offsets = (np.arange(R) - (R - 1) / 2) * (bar_w + gap)
 
     ax.set_xlim(x[0] - 0.6, x[-1] + 0.6)
@@ -149,7 +152,7 @@ def main():
 
     # Legend
     handles = [mpatches.Patch(facecolor=s["color"], edgecolor="none",
-                              label=f"{s['label']}  ({s['run_id']}, n={s['n']})")
+                              label=f"{s['label']}  (n={s['n']})")
                for s in scored]
     ax.legend(handles=handles, loc="upper right", fontsize=8.5,
               frameon=True, facecolor=BG, edgecolor=GRID, framealpha=1,
@@ -164,7 +167,7 @@ def main():
     ax.set_axisbelow(True)
     ax.grid(axis="y", color=GRID, linewidth=0.6, zorder=0)
     ax.set_ylabel("Score", fontsize=11, color=TEXT, labelpad=8)
-    ax.set_title("Reasoning termination — base vs. ask tool (train / val few-shot)",
+    ax.set_title("Reasoning termination — no tools vs. ask tool × train vs. val few-shot",
                  fontsize=13, color=TEXT, pad=10)
 
     for sp in ("top", "right"):
@@ -175,7 +178,7 @@ def main():
     ax.tick_params(axis="x", colors=TEXT, length=3)
 
     fig.tight_layout()
-    out = PLOTS_DIR / "reasoning_termination_train_val_ask.png"
+    out = PLOTS_DIR / "reasoning_termination_ask_x_split.png"
     plt.savefig(out, dpi=300, bbox_inches="tight", facecolor=BG)
     print(f"\nSaved {out}")
     plt.close()

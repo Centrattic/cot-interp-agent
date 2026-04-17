@@ -38,6 +38,16 @@ CSV_TO_RUN_DIR = {
     "7_atypical_cot_length":    "atypical_cot_length",
 }
 
+# Pin specific runs (instead of "latest") when a particular variant is canonical
+PINNED_RUNS = {
+    # Base agent (no tools) with val-split few-shot
+    "reasoning_termination": "run-20260416-170803",
+    # Clean rerun of the base (no tools) agent
+    "atypical_answer":       "run-20260416-165206",
+    # Clean rerun of the base (no tools) agent
+    "atypical_cot_length":   "run-20260416-165207",
+}
+
 # Short labels used on x-axis
 TASK_LABELS = {
     "1_reasoning_termination":  "Reasoning\ntermination",
@@ -106,16 +116,20 @@ def pick_latest_run(task_dir: Path) -> Path:
     return runs[-1]
 
 
-def compute_agent_gmean2(task_run_dir: str, data_dir: Path) -> tuple[float, int, int]:
+def compute_agent_gmean2(task_run_dir: str, data_dir: Path) -> tuple[float, int, int, str]:
     """Compute g-mean² = TPR × TNR for agent outputs vs ground-truth labels.
 
     Matches test-NNN dirs to the N-th sorted example in data/<task>/test/
     (that's the order run_tests.py dispatches them in).
 
-    Returns (gmean2, n_tests_scored, n_tests_total_in_run).
+    Returns (gmean2, n_tests_scored, n_tests_total_in_run, run_name).
     """
     run_root = REPO / "agent-runs" / task_run_dir
-    run = pick_latest_run(run_root)
+    pinned = PINNED_RUNS.get(task_run_dir)
+    if pinned:
+        run = run_root / pinned
+    else:
+        run = pick_latest_run(run_root)
 
     # Ordered list of labels, matching dispatch order
     data_files = sorted(data_dir.glob("*.json"))
@@ -149,7 +163,7 @@ def compute_agent_gmean2(task_run_dir: str, data_dir: Path) -> tuple[float, int,
     tpr = (y_pred[pos] == 1).mean() if pos.any() else 0.0
     tnr = (y_pred[neg] == 0).mean() if neg.any() else 0.0
     gmean2 = tpr * tnr
-    return float(gmean2), int(len(y_true)), int(len(test_dirs))
+    return float(gmean2), int(len(y_true)), int(len(test_dirs)), run.name
 
 
 def draw_rounded_bar(ax, cx, bottom, height, color, width, r_x, r_y, zorder=3):
@@ -195,7 +209,7 @@ def main():
         best_name, best_val = best_overall_id(methods)
         run_dir = CSV_TO_RUN_DIR[task]
         data_dir = REPO / "data" / run_dir / "test"
-        ag_val, n_scored, n_total = compute_agent_gmean2(run_dir, data_dir)
+        ag_val, n_scored, n_total, run_name = compute_agent_gmean2(run_dir, data_dir)
 
         monitor_vals.append(mon_val)
         agent_vals.append(ag_val)
@@ -204,7 +218,7 @@ def main():
         best_names.append(best_name)
 
         print(f"{task:30s} {mon_name:35s}  {mon_val:.3f} "
-              f" {ag_val:.3f}  {best_name:35s}  ({n_scored}/{n_total})")
+              f" {ag_val:.3f}  {best_name:35s}  ({n_scored}/{n_total}, {run_name})")
 
     # ── Figure ──────────────────────────────────────────────────────
     N = len(tasks)
