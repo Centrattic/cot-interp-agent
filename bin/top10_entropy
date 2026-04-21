@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Entropy of the top-10 token distribution at a given position, read from
+# precomputed logits (see src/precompute_logits.py). A proxy for how
+# confident the model is about what comes next at that position.
+#
+# Usage: top10_entropy <example_id> <token_position>
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session." >&2
+    exit 1
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/top10_entropy.py" "$@"

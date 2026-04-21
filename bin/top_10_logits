@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Force up to 10 tokens into an example at a given position and read the
-# single next token the model predicts.
+# Show the top-10 tokens and their logits at a specific token position,
+# read from precomputed logits (see src/precompute_logits.py).
 #
-# Usage: force <example_id> <token_position> <tokens_to_force...>
+# Usage: top_10_logits <example_id> <token_position>
 
 set -euo pipefail
 
@@ -12,4 +12,4 @@ if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
 fi
 
 PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
-exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/force.py" "$@"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/top_10_logits.py" "$@"

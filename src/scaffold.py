@@ -207,6 +207,78 @@ Ask a short follow-up question about an example via an oracle model
 - On success, also prints `response:` and `details:` — the latter names a new file `ask_<n>.json` in your current directory with the full question, truncated response, raw response, model, and token counts.
 - On failure (token limit exceeded, wrong example id, etc.), prints the reason and writes **no** file.
 """.strip(),
+    "top_10_logits": """### `top_10_logits <example_id> <token_position>`
+
+Print the top-10 tokens and their logit values at `token_position` within
+the example's chain-of-thought, read from a precomputed sidecar
+(`<example_id>.logits.npz` next to the example's JSON). Output is 10 lines
+of `<token_repr>\\t<logit>`, logits descending.
+
+**Positions are CoT-relative.** `token_position = 0` is the first token of
+`cot_prefix` (what you see in example.json). Valid range is
+`[0, len(cot_prefix_tokens))`.
+
+**Scope**
+- **Strategy agent:** any few-shot `<example_id>`.
+- **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
+
+**Limits**
+- Position must be inside the CoT range (fails with a clear error otherwise).
+- If the sidecar file is missing, the tool fails and tells you to run
+  `src/precompute_logits.py` for this task.
+""".strip(),
+    "top10_entropy": """### `top10_entropy <example_id> <token_position>`
+
+Entropy (nats) of the softmaxed top-10 token distribution at `token_position`,
+read from the same precomputed sidecar as `top_10_logits`. A proxy for how
+confident the model is about what comes next at that position. Low entropy =
+the model is peaked on one/few tokens; high entropy = the top-10 are spread
+out.
+
+Positions are **CoT-relative** (same convention as `top_10_logits`).
+
+**Scope**
+- **Strategy agent:** any few-shot `<example_id>`.
+- **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
+
+**Note**
+- Entropy is computed over only the top-10 logits (softmax restricted to
+  those 10 values), not over the full vocabulary. It is therefore an
+  underestimate of true entropy but preserves the relative ordering
+  (more peaked vs more spread) which is what matters for this signal.
+""".strip(),
+    "force": """### `force <example_id> <token_position> <tokens_to_force...>`
+
+Splice **up to 10 tokens** into the example's chain-of-thought at a given
+CoT-relative position, ask the model what it would emit next, and print the
+next token plus the top-10 logprobs at that next-token slot.
+
+The effective prompt is
+`<chat prefix> + <cot_prefix[:token_position] tokens> + <tokens_to_force>`,
+and the tool returns the greedy next token together with the top-10
+distribution at that slot — one forward pass through Tinker's SamplingClient.
+
+**Positions are CoT-relative.** `0` means "prepend the forced tokens at the
+start of the CoT"; `len(cot_prefix_tokens)` means "append them at the end
+of the CoT (before any continuation)".
+
+**Scope**
+- **Strategy agent:** any few-shot `<example_id>`.
+- **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
+
+**Limits**
+- `tokens_to_force` must tokenize to ≤10 tokens with the base model's tokenizer.
+- Requires TINKER_BASE_MODEL (and Tinker auth) to be set in the environment
+  of the scaffold launcher.
+
+**Output**
+```
+next_token: '<token>'
+top_10:
+  '<tok>'\\t<logprob>
+  ...
+```
+""".strip(),
 }
 
 
