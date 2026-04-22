@@ -65,6 +65,18 @@ def run_single_test(
     test_folder = run_dir / f"test-{test_index:03d}"
     test_folder.mkdir(parents=True, exist_ok=True)
 
+    # Resume support: short-circuit if this test already has a valid answer.
+    existing_answer = test_folder / "answer.txt"
+    if existing_answer.exists():
+        prior = existing_answer.read_text().strip().lower()
+        if prior in ("yes", "no"):
+            return {
+                "index": test_index,
+                "example_id": example["id"],
+                "answer": prior,
+                "exit_code": 0,
+            }
+
     # Filter the example before writing to test-NNN/example.json.
     # - Always drop `label` (ground truth).
     # - If test_keep_fields is set, keep ONLY those fields (whitelist).

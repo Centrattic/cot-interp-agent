@@ -20,7 +20,7 @@ resolve_python() {
         if [[ -f "$candidate" ]]; then echo "$candidate"; return; fi
     done
     # uv-managed installs (Windows)
-    for candidate in "$APPDATA/uv/python"/*/python.exe "$HOME/.local/share/uv/python"/*/python.exe; do
+    for candidate in "${APPDATA:-}/uv/python"/*/python.exe "$HOME/.local/share/uv/python"/*/python.exe; do
         if [[ -f "$candidate" ]]; then echo "$candidate"; return; fi
     done
     # uv fallback

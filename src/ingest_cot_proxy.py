@@ -259,6 +259,7 @@ def ingest(
     seed: int,
     few_shot_split: str = "train",
     test_split: str = "test",
+    task_name: str | None = None,
 ):
     if preset_name not in TASK_PRESETS:
         print(f"Unknown preset: {preset_name}. Available: {sorted(TASK_PRESETS)}")
@@ -272,7 +273,8 @@ def ingest(
         print(f"Error: missing {train_dir} or {test_dir}")
         sys.exit(1)
 
-    task_dir = DATA_DIR / preset_name
+    out_name = task_name or preset_name
+    task_dir = DATA_DIR / out_name
     few_shot_dst = task_dir / "few-shot"
     test_dst = task_dir / "test"
 
@@ -288,7 +290,7 @@ def ingest(
     # Few-shot: balanced sample from train
     few_shot_items = sample_balanced(train_dir, few_shot_per_class, seed, label_map)
     write_items(few_shot_items, few_shot_dst)
-    print(f"[{preset_name}] {few_shot_per_class}+{few_shot_per_class} few-shot written to {few_shot_dst}")
+    print(f"[{out_name}] {few_shot_per_class}+{few_shot_per_class} few-shot written to {few_shot_dst}")
 
     # Test: balanced sample from test (or all if n is None)
     test_items = sample_test(test_dir, test_n, seed, label_map)
@@ -296,12 +298,12 @@ def ingest(
     class_counts = {0: 0, 1: 0}
     for _, d in test_items:
         class_counts[d["label"]] += 1
-    print(f"[{preset_name}] {len(test_items)} test examples written "
+    print(f"[{out_name}] {len(test_items)} test examples written "
           f"(label=0: {class_counts[0]}, label=1: {class_counts[1]})")
 
     # Metadata
     meta = {
-        "name": preset_name,
+        "name": out_name,
         "description": preset["description"],
         "source": str(source),
         "dataset_id": preset["dataset_id"],
@@ -317,7 +319,7 @@ def ingest(
     }
     with open(task_dir / "metadata.json", "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
-    print(f"[{preset_name}] metadata written to {task_dir / 'metadata.json'}")
+    print(f"[{out_name}] metadata written to {task_dir / 'metadata.json'}")
 
 
 def main():
@@ -334,6 +336,9 @@ def main():
                         "matches test better.")
     p.add_argument("--test-split", default="test",
                    help="Which source subdir to copy test examples from (default: test)")
+    p.add_argument("--task-name", default=None,
+                   help="Override output task directory name (default: preset name). "
+                        "Use to ingest the same preset under a different name (e.g. _ood variant).")
     args = p.parse_args()
 
     if args.list_presets:
@@ -347,6 +352,7 @@ def main():
     ingest(
         args.preset, args.few_shot_per_class, args.test_n, args.seed,
         few_shot_split=args.few_shot_split, test_split=args.test_split,
+        task_name=args.task_name,
     )
 
 

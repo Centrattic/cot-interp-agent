@@ -1,0 +1,113 @@
+Total partitions: 10; incomplete: 10
+  STUB strategies (need re-launch): 10
+    run-20260422-133650/partition-000
+    run-20260422-133650/partition-001
+    run-20260422-133650/partition-002
+    run-20260422-133650/partition-003
+    run-20260422-133650/partition-004
+    run-20260422-133650/partition-005
+    run-20260422-133650/partition-006
+    run-20260422-133650/partition-007
+    run-20260422-133650/partition-008
+    run-20260422-133650/partition-009
+  Ready to test (just need test phase): 0
+
+=== Phase 1: re-launching 10 strategy agents ===
+[run-20260422-133650/partition-000] STRATEGY agent launching
+[run-20260422-133650/partition-002] STRATEGY agent launching
+[run-20260422-133650/partition-001] STRATEGY agent launching
+[run-20260422-133650/partition-003] STRATEGY agent launching
+[run-20260422-133650/partition-004] STRATEGY agent launching
+[run-20260422-133650/partition-005] STRATEGY agent launching
+[run-20260422-133650/partition-006] STRATEGY agent launching
+[run-20260422-133650/partition-008] STRATEGY agent launching
+[run-20260422-133650/partition-009] STRATEGY agent launching
+[run-20260422-133650/partition-007] STRATEGY agent launching
+[run-20260422-133650/partition-007] STRATEGY exit=1
+[run-20260422-133650/partition-002] STRATEGY exit=1
+[run-20260422-133650/partition-000] STRATEGY exit=1
+[run-20260422-133650/partition-005] STRATEGY exit=1
+[run-20260422-133650/partition-001] STRATEGY exit=1
+[run-20260422-133650/partition-003] STRATEGY exit=1
+[run-20260422-133650/partition-009] STRATEGY exit=1
+[run-20260422-133650/partition-008] STRATEGY exit=1
+[run-20260422-133650/partition-004] STRATEGY exit=1
+[run-20260422-133650/partition-006] STRATEGY exit=1
+
+=== Phase 2: running test phase for 4 partition(s) ===
+[run-20260422-133650/partition-001] TEST phase launching (workers=10)
+[run-20260422-133650/partition-009] TEST phase launching (workers=10)
+[run-20260422-133650/partition-008] TEST phase launching (workers=10)
+[run-20260422-133650/partition-004] TEST phase launching (workers=10)
+[run-20260422-133650/partition-009] TEST exit=0
+Partition 9/10: running 10 test(s) in parallel...
+  Test 5 (piqa_07631_rollout_076): NO ANSWER
+  Test 3 (piqa_03801_rollout_156): NO ANSWER
+  Test 2 (piqa_02069_rollout_038): NO ANSWER
+  Test 1 (piqa_01504_rollout_096): NO ANSWER
+  Test 7 (piqa_10680_rollout_011): NO ANSWER
+  Test 4 (piqa_06263_rollout_166): NO ANSWER
+  Test 6 (piqa_10004_rollout_041): NO ANSWER
+  Test 8 (piqa_11478_rollout_170): NO ANSWER
+  Test 9 (piqa_15243_rollout_091): NO ANSWER
+  Test 0 (piqa_00304_rollout_152): NO ANSWER
+
+Results: 0 yes, 0 no, 10 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_answer_ood/run-20260422-133650/partition-009/results.csv
+[run-20260422-133650/partition-004] TEST exit=0
+Partition 4/10: running 10 test(s) in parallel...
+  Test 3 (piqa_03801_rollout_035): NO ANSWER
+  Test 0 (piqa_00292_rollout_052): NO ANSWER
+  Test 8 (piqa_10680_rollout_125): NO ANSWER
+  Test 2 (piqa_01866_rollout_072): NO ANSWER
+  Test 1 (piqa_00922_rollout_037): NO ANSWER
+  Test 7 (piqa_10292_rollout_031): NO ANSWER
+  Test 9 (piqa_13154_rollout_133): NO ANSWER
+  Test 5 (piqa_06388_rollout_091): NO ANSWER
+  Test 6 (piqa_09323_rollout_009): NO ANSWER
+  Test 4 (piqa_04666_rollout_199): NO ANSWER
+
+Results: 0 yes, 0 no, 10 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_answer_ood/run-20260422-133650/partition-004/results.csv
+[run-20260422-133650/partition-008] TEST exit=0
+Partition 8/10: running 10 test(s) in parallel...
+  Test 8 (piqa_11478_rollout_100): NO ANSWER
+  Test 7 (piqa_10292_rollout_178): NO ANSWER
+  Test 5 (piqa_07631_rollout_044): NO ANSWER
+  Test 0 (piqa_00304_rollout_113): NO ANSWER
+  Test 1 (piqa_01504_rollout_076): NO ANSWER
+  Test 6 (piqa_10004_rollout_037): NO ANSWER
+  Test 9 (piqa_15243_rollout_031): NO ANSWER
+  Test 2 (piqa_01866_rollout_199): NO ANSWER
+  Test 4 (piqa_06263_rollout_124): NO ANSWER
+  Test 3 (piqa_03801_rollout_146): NO ANSWER
+
+Results: 0 yes, 0 no, 10 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_answer_ood/run-20260422-133650/partition-008/results.csv
+[run-20260422-133650/partition-001] TEST exit=0
+Partition 1/10: running 10 test(s) in parallel...
+  Test 3 (piqa_02069_rollout_128): NO ANSWER
+  Test 0 (piqa_00141_rollout_048): NO ANSWER
+  Test 7 (piqa_10004_rollout_109): NO ANSWER
+  Test 9 (piqa_13154_rollout_063): NO ANSWER
+  Test 1 (piqa_00922_rollout_004): NO ANSWER
+  Test 2 (piqa_01813_rollout_006): NO ANSWER
+  Test 6 (piqa_07631_rollout_168): NO ANSWER
+  Test 4 (piqa_04666_rollout_122): NO ANSWER
+  Test 5 (piqa_06388_rollout_014): NO ANSWER
+  Test 8 (piqa_10680_rollout_096): NO ANSWER
+
+Results: 0 yes, 0 no, 10 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_answer_ood/run-20260422-133650/partition-001/results.csv
+
+=== Final state ===
+  run-20260422-133650/partition-000: STUB
+  run-20260422-133650/partition-001: OK
+  run-20260422-133650/partition-002: STUB
+  run-20260422-133650/partition-003: STUB
+  run-20260422-133650/partition-004: OK
+  run-20260422-133650/partition-005: STUB
+  run-20260422-133650/partition-006: STUB
+  run-20260422-133650/partition-007: STUB
+  run-20260422-133650/partition-008: OK
+  run-20260422-133650/partition-009: OK

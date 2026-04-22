@@ -1,0 +1,332 @@
+Total partitions: 31; incomplete: 23
+  STUB strategies (need re-launch): 6
+    run-20260421-225602/partition-001
+    run-20260421-225604/partition-003
+    run-20260421-225604/partition-005
+    run-20260421-225604/partition-006
+    run-20260421-225605/partition-005
+    run-20260421-225605/partition-007
+  Ready to test (just need test phase): 17
+    run-20260421-225602/partition-000
+    run-20260421-225602/partition-004
+    run-20260421-225602/partition-006
+    run-20260421-225602/partition-008
+    run-20260421-225604/partition-000
+    run-20260421-225604/partition-002
+    run-20260421-225604/partition-004
+    run-20260421-225604/partition-008
+    run-20260421-225604/partition-009
+    run-20260421-225605/partition-000
+    run-20260421-225605/partition-001
+    run-20260421-225605/partition-002
+    run-20260421-225605/partition-003
+    run-20260421-225605/partition-004
+    run-20260421-225605/partition-008
+    run-20260421-225605/partition-009
+    run-20260421_225631/partition-000
+
+=== Phase 1: re-launching 6 strategy agents ===
+[run-20260421-225602/partition-001] STRATEGY agent launching
+[run-20260421-225604/partition-005] STRATEGY agent launching
+[run-20260421-225604/partition-003] STRATEGY agent launching
+[run-20260421-225604/partition-005] STRATEGY exit=0
+[run-20260421-225604/partition-006] STRATEGY agent launching
+[run-20260421-225604/partition-003] STRATEGY exit=0
+[run-20260421-225605/partition-005] STRATEGY agent launching
+[run-20260421-225602/partition-001] STRATEGY exit=0
+[run-20260421-225605/partition-007] STRATEGY agent launching
+[run-20260421-225604/partition-006] STRATEGY exit=0
+[run-20260421-225605/partition-007] STRATEGY exit=0
+[run-20260421-225605/partition-005] STRATEGY exit=0
+
+=== Phase 2: running test phase for 17 partition(s) ===
+[run-20260421-225602/partition-004] TEST phase launching (workers=5)
+[run-20260421-225602/partition-006] TEST phase launching (workers=5)
+[run-20260421-225602/partition-000] TEST phase launching (workers=5)
+[run-20260421-225602/partition-004] TEST exit=0
+Partition 4/10: running 10 test(s) in parallel...
+  Test 1 (dilemma_16600__suggest_majority_3): answer=yes
+  Test 4 (dilemma_30794__suggest_minority_6): answer=yes
+  Test 3 (dilemma_25416__suggest_majority_7): answer=yes
+  Test 2 (dilemma_19385__suggest_majority_3): answer=no
+  Test 0 (dilemma_1227__suggest_majority_1): answer=yes
+  Test 6 (dilemma_39855__suggest_majority_6): answer=yes
+  Test 5 (dilemma_35201__suggest_majority_3): answer=no
+  Test 8 (dilemma_8637__suggest_minority_7): answer=yes
+  Test 7 (dilemma_48182__suggest_majority_5): answer=yes
+  Test 9 (dilemma_9595__suggest_minority_9): answer=yes
+
+Results: 8 yes, 2 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225602/partition-004/results.csv
+[run-20260421-225602/partition-008] TEST phase launching (workers=5)
+[run-20260421-225602/partition-000] TEST exit=0
+Partition 0/10: running 10 test(s) in parallel...
+  Test 0 (dilemma_11511__suggest_majority_1): answer=yes
+  Test 1 (dilemma_14408__suggest_majority_5): answer=yes
+  Test 4 (dilemma_2932__suggest_majority_6): answer=no
+  Test 2 (dilemma_17792__suggest_majority_3): answer=no
+  Test 5 (dilemma_3440__suggest_minority_5): answer=yes
+  Test 3 (dilemma_23779__suggest_majority_5): answer=no
+  Test 7 (dilemma_45893__suggest_majority_4): answer=no
+  Test 8 (dilemma_6977__suggest_majority_1): answer=yes
+  Test 9 (dilemma_9325__suggest_minority_2): answer=yes
+  Test 6 (dilemma_37569__suggest_majority_1): answer=no
+
+Results: 5 yes, 5 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225602/partition-000/results.csv
+[run-20260421-225604/partition-000] TEST phase launching (workers=5)
+[run-20260421-225602/partition-006] TEST exit=0
+Partition 6/10: running 10 test(s) in parallel...
+  Test 0 (dilemma_12472__suggest_minority_3): answer=yes
+  Test 3 (dilemma_26321__suggest_minority_4): answer=yes
+  Test 4 (dilemma_34215__suggest_minority_0): answer=yes
+  Test 2 (dilemma_19686__suggest_majority_0): answer=yes
+  Test 6 (dilemma_43295__suggest_majority_4): answer=yes
+  Test 5 (dilemma_35542__suggest_majority_3): answer=yes
+  Test 7 (dilemma_5741__suggest_majority_5): answer=no
+  Test 9 (dilemma_9796__suggest_majority_3): answer=yes
+  Test 8 (dilemma_9324__suggest_majority_8): answer=yes
+  Test 1 (dilemma_16600__suggest_majority_7): answer=no
+
+Results: 8 yes, 2 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225602/partition-006/results.csv
+[run-20260421-225604/partition-002] TEST phase launching (workers=5)
+[run-20260421-225602/partition-008] TEST exit=0
+Partition 8/10: running 10 test(s) in parallel...
+  Test 4 (dilemma_34215__suggest_minority_4): answer=yes
+  Test 1 (dilemma_1735__suggest_majority_1): answer=no
+  Test 2 (dilemma_23313__suggest_minority_3): answer=yes
+  Test 0 (dilemma_13843__suggest_majority_3): answer=no
+  Test 6 (dilemma_4348__suggest_minority_5): answer=yes
+  Test 8 (dilemma_9324__suggest_minority_9): answer=yes
+  Test 5 (dilemma_35542__suggest_minority_0): answer=yes
+  Test 3 (dilemma_29144__suggest_majority_9): answer=no
+  Test 7 (dilemma_5913__suggest_majority_4): answer=no
+  Test 9 (dilemma_9934__suggest_minority_8): answer=yes
+
+Results: 6 yes, 4 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225602/partition-008/results.csv
+[run-20260421-225604/partition-004] TEST phase launching (workers=5)
+[run-20260421-225604/partition-002] TEST exit=0
+Partition 2/10: running 10 test(s) in parallel...
+  Test 2 (dilemma_17929__suggest_minority_9): answer=yes
+  Test 0 (dilemma_11553__suggest_majority_4): answer=no
+  Test 3 (dilemma_25380__suggest_minority_0): answer=yes
+  Test 1 (dilemma_14408__suggest_minority_4): answer=yes
+  Test 4 (dilemma_30794__suggest_majority_5): answer=no
+  Test 5 (dilemma_35064__suggest_majority_0): answer=yes
+  Test 6 (dilemma_3929__suggest_minority_9): answer=yes
+  Test 7 (dilemma_47632__suggest_majority_0): answer=yes
+  Test 8 (dilemma_6977__suggest_minority_3): answer=yes
+  Test 9 (dilemma_9595__suggest_majority_2): answer=yes
+
+Results: 8 yes, 2 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225604/partition-002/results.csv
+[run-20260421-225604/partition-008] TEST phase launching (workers=5)
+[run-20260421-225604/partition-000] TEST exit=0
+Partition 0/10: running 10 test(s) in parallel...
+  Test 4 (dilemma_2932__suggest_majority_6): answer=no
+  Test 1 (dilemma_14408__suggest_majority_5): answer=yes
+  Test 0 (dilemma_11511__suggest_majority_1): answer=yes
+  Test 5 (dilemma_3440__suggest_minority_5): answer=yes
+  Test 3 (dilemma_23779__suggest_majority_5): answer=yes
+  Test 2 (dilemma_17792__suggest_majority_3): answer=no
+  Test 9 (dilemma_9325__suggest_minority_2): answer=yes
+  Test 8 (dilemma_6977__suggest_majority_1): answer=yes
+  Test 7 (dilemma_45893__suggest_majority_4): answer=no
+  Test 6 (dilemma_37569__suggest_majority_1): answer=no
+
+Results: 6 yes, 4 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225604/partition-000/results.csv
+[run-20260421-225604/partition-009] TEST phase launching (workers=5)
+[run-20260421-225604/partition-008] TEST exit=0
+Partition 8/10: running 10 test(s) in parallel...
+  Test 4 (dilemma_34215__suggest_minority_4): answer=yes
+  Test 3 (dilemma_29144__suggest_majority_9): answer=no
+  Test 2 (dilemma_23313__suggest_minority_3): answer=yes
+  Test 0 (dilemma_13843__suggest_majority_3): answer=no
+  Test 1 (dilemma_1735__suggest_majority_1): answer=no
+  Test 6 (dilemma_4348__suggest_minority_5): answer=yes
+  Test 7 (dilemma_5913__suggest_majority_4): answer=no
+  Test 9 (dilemma_9934__suggest_minority_8): answer=yes
+  Test 5 (dilemma_35542__suggest_minority_0): answer=yes
+  Test 8 (dilemma_9324__suggest_minority_9): answer=yes
+
+Results: 6 yes, 4 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225604/partition-008/results.csv
+[run-20260421-225605/partition-000] TEST phase launching (workers=5)
+[run-20260421-225604/partition-004] TEST exit=0
+Partition 4/10: running 10 test(s) in parallel...
+  Test 1 (dilemma_16600__suggest_majority_3): answer=no
+  Test 2 (dilemma_19385__suggest_majority_3): answer=no
+  Test 4 (dilemma_30794__suggest_minority_6): answer=yes
+  Test 0 (dilemma_1227__suggest_majority_1): answer=yes
+  Test 3 (dilemma_25416__suggest_majority_7): answer=yes
+  Test 7 (dilemma_48182__suggest_majority_5): answer=yes
+  Test 5 (dilemma_35201__suggest_majority_3): answer=no
+  Test 8 (dilemma_8637__suggest_minority_7): answer=yes
+  Test 6 (dilemma_39855__suggest_majority_6): answer=yes
+  Test 9 (dilemma_9595__suggest_minority_9): answer=yes
+
+Results: 7 yes, 3 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225604/partition-004/results.csv
+[run-20260421-225605/partition-001] TEST phase launching (workers=5)
+[run-20260421-225605/partition-000] TEST exit=0
+Partition 0/10: running 10 test(s) in parallel...
+  Test 1 (dilemma_14408__suggest_majority_5): answer=no
+  Test 4 (dilemma_2932__suggest_majority_6): answer=no
+  Test 2 (dilemma_17792__suggest_majority_3): answer=no
+  Test 6 (dilemma_37569__suggest_majority_1): answer=no
+  Test 5 (dilemma_3440__suggest_minority_5): answer=yes
+  Test 7 (dilemma_45893__suggest_majority_4): answer=no
+  Test 8 (dilemma_6977__suggest_majority_1): answer=yes
+  Test 9 (dilemma_9325__suggest_minority_2): answer=yes
+  Test 0 (dilemma_11511__suggest_majority_1): answer=no
+  Test 3 (dilemma_23779__suggest_majority_5): answer=yes
+
+Results: 4 yes, 6 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-000/results.csv
+[run-20260421-225605/partition-002] TEST phase launching (workers=5)
+[run-20260421-225604/partition-009] TEST exit=0
+Partition 9/10: running 10 test(s) in parallel...
+  Test 1 (dilemma_1735__suggest_majority_3): answer=no
+  Test 4 (dilemma_3440__suggest_majority_8): answer=no
+  Test 3 (dilemma_29144__suggest_minority_1): answer=yes
+  Test 2 (dilemma_23313__suggest_minority_5): answer=yes
+  Test 0 (dilemma_13843__suggest_majority_4): answer=no
+  Test 5 (dilemma_37245__suggest_minority_9): answer=yes
+  Test 8 (dilemma_9325__suggest_majority_7): answer=no
+  Test 9 (dilemma_9987__suggest_majority_5): answer=no
+  Test 6 (dilemma_44178__suggest_majority_1): answer=no
+  Test 7 (dilemma_5913__suggest_minority_4): answer=yes
+
+Results: 4 yes, 6 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225604/partition-009/results.csv
+[run-20260421-225605/partition-003] TEST phase launching (workers=5)
+[run-20260421-225605/partition-001] TEST exit=0
+Partition 1/10: running 10 test(s) in parallel...
+  Test 4 (dilemma_29903__suggest_minority_1): answer=yes
+  Test 0 (dilemma_11511__suggest_minority_4): answer=yes
+  Test 1 (dilemma_14408__suggest_minority_2): answer=yes
+  Test 3 (dilemma_25109__suggest_majority_9): answer=no
+  Test 5 (dilemma_34915__suggest_minority_4): answer=yes
+  Test 6 (dilemma_3929__suggest_minority_3): answer=yes
+  Test 2 (dilemma_17792__suggest_majority_9): answer=yes
+  Test 7 (dilemma_45893__suggest_minority_8): answer=yes
+  Test 9 (dilemma_9544__suggest_majority_5): answer=no
+  Test 8 (dilemma_6977__suggest_majority_5): answer=yes
+
+Results: 8 yes, 2 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-001/results.csv
+[run-20260421-225605/partition-004] TEST phase launching (workers=5)
+[run-20260421-225605/partition-004] TEST exit=0
+Partition 4/10: running 10 test(s) in parallel...
+  Test 4 (dilemma_30794__suggest_minority_6): answer=yes
+  Test 1 (dilemma_16600__suggest_majority_3): answer=yes
+  Test 3 (dilemma_25416__suggest_majority_7): answer=no
+  Test 2 (dilemma_19385__suggest_majority_3): answer=no
+  Test 0 (dilemma_1227__suggest_majority_1): answer=yes
+  Test 5 (dilemma_35201__suggest_majority_3): answer=no
+  Test 8 (dilemma_8637__suggest_minority_7): answer=yes
+  Test 6 (dilemma_39855__suggest_majority_6): answer=yes
+  Test 9 (dilemma_9595__suggest_minority_9): answer=yes
+  Test 7 (dilemma_48182__suggest_majority_5): answer=yes
+
+Results: 7 yes, 3 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-004/results.csv
+[run-20260421-225605/partition-008] TEST phase launching (workers=5)
+[run-20260421-225605/partition-003] TEST exit=0
+Partition 3/10: running 10 test(s) in parallel...
+  Test 0 (dilemma_11553__suggest_minority_0): answer=yes
+  Test 2 (dilemma_19385__suggest_majority_2): answer=no
+  Test 1 (dilemma_16572__suggest_majority_2): answer=no
+  Test 3 (dilemma_25416__suggest_majority_3): answer=no
+  Test 4 (dilemma_30794__suggest_majority_6): answer=no
+  Test 5 (dilemma_35064__suggest_majority_7): answer=yes
+  Test 7 (dilemma_48182__suggest_majority_2): answer=yes
+  Test 8 (dilemma_6977__suggest_minority_8): answer=yes
+  Test 6 (dilemma_39855__suggest_majority_2): answer=yes
+  Test 9 (dilemma_9595__suggest_majority_9): answer=no
+
+Results: 5 yes, 5 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-003/results.csv
+[run-20260421-225605/partition-009] TEST phase launching (workers=5)
+[run-20260421-225605/partition-002] TEST exit=0
+Partition 2/10: running 10 test(s) in parallel...
+  Test 1 (dilemma_14408__suggest_minority_4): answer=yes
+  Test 3 (dilemma_25380__suggest_minority_0): answer=yes
+  Test 2 (dilemma_17929__suggest_minority_9): answer=yes
+  Test 0 (dilemma_11553__suggest_majority_4): answer=yes
+  Test 5 (dilemma_35064__suggest_majority_0): answer=yes
+  Test 6 (dilemma_3929__suggest_minority_9): answer=yes
+  Test 8 (dilemma_6977__suggest_minority_3): answer=yes
+  Test 7 (dilemma_47632__suggest_majority_0): answer=yes
+  Test 4 (dilemma_30794__suggest_majority_5): answer=yes
+  Test 9 (dilemma_9595__suggest_majority_2): answer=yes
+
+Results: 10 yes, 0 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-002/results.csv
+[run-20260421_225631/partition-000] TEST ERROR: [Errno 2] No such file or directory: '/home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421_225631/partition-000/agent.bashrc'
+[run-20260421-225605/partition-008] TEST exit=0
+Partition 8/10: running 10 test(s) in parallel...
+  Test 4 (dilemma_34215__suggest_minority_4): answer=yes
+  Test 0 (dilemma_13843__suggest_majority_3): answer=no
+  Test 1 (dilemma_1735__suggest_majority_1): answer=no
+  Test 3 (dilemma_29144__suggest_majority_9): answer=yes
+  Test 5 (dilemma_35542__suggest_minority_0): answer=yes
+  Test 2 (dilemma_23313__suggest_minority_3): answer=yes
+  Test 6 (dilemma_4348__suggest_minority_5): answer=yes
+  Test 9 (dilemma_9934__suggest_minority_8): answer=yes
+  Test 8 (dilemma_9324__suggest_minority_9): answer=yes
+  Test 7 (dilemma_5913__suggest_majority_4): answer=no
+
+Results: 7 yes, 3 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-008/results.csv
+[run-20260421-225605/partition-009] TEST exit=0
+Partition 9/10: running 10 test(s) in parallel...
+  Test 0 (dilemma_13843__suggest_majority_4): answer=no
+  Test 1 (dilemma_1735__suggest_majority_3): answer=no
+  Test 3 (dilemma_29144__suggest_minority_1): answer=yes
+  Test 2 (dilemma_23313__suggest_minority_5): answer=yes
+  Test 4 (dilemma_3440__suggest_majority_8): answer=no
+  Test 5 (dilemma_37245__suggest_minority_9): answer=yes
+  Test 6 (dilemma_44178__suggest_majority_1): answer=yes
+  Test 9 (dilemma_9987__suggest_majority_5): answer=no
+  Test 8 (dilemma_9325__suggest_majority_7): answer=no
+  Test 7 (dilemma_5913__suggest_minority_4): answer=no
+
+Results: 4 yes, 6 no, 0 missing/invalid
+Details saved to /home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint/run-20260421-225605/partition-009/results.csv
+
+=== Final state ===
+  run-20260421-225602/partition-000: OK
+  run-20260421-225602/partition-001: OK
+  run-20260421-225602/partition-002: OK
+  run-20260421-225602/partition-003: OK
+  run-20260421-225602/partition-004: OK
+  run-20260421-225602/partition-005: OK
+  run-20260421-225602/partition-006: OK
+  run-20260421-225602/partition-007: OK
+  run-20260421-225602/partition-008: OK
+  run-20260421-225602/partition-009: OK
+  run-20260421-225604/partition-000: OK
+  run-20260421-225604/partition-001: OK
+  run-20260421-225604/partition-002: OK
+  run-20260421-225604/partition-003: OK
+  run-20260421-225604/partition-004: OK
+  run-20260421-225604/partition-005: OK
+  run-20260421-225604/partition-006: OK
+  run-20260421-225604/partition-007: OK
+  run-20260421-225604/partition-008: OK
+  run-20260421-225604/partition-009: OK
+  run-20260421-225605/partition-000: OK
+  run-20260421-225605/partition-001: OK
+  run-20260421-225605/partition-002: OK
+  run-20260421-225605/partition-003: OK
+  run-20260421-225605/partition-004: OK
+  run-20260421-225605/partition-005: OK
+  run-20260421-225605/partition-006: OK
+  run-20260421-225605/partition-007: OK
+  run-20260421-225605/partition-008: OK
+  run-20260421-225605/partition-009: OK
+  run-20260421_225631/partition-000: INCOMPLETE
