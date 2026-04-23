@@ -22,6 +22,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# Allow importing from src/ (for tools.sae_encode)
+sys.path.insert(0, str(ROOT / "src"))
 DATA_DIR = ROOT / "data"
 RUNS_DIR = ROOT / "agent-runs"
 TRACES_DIR = ROOT / "agent-traces"
@@ -433,6 +436,16 @@ def create_run(
         task_meta["description"] = description
     fspc = few_shot_per_class if few_shot_per_class is not None else \
         int(task_meta.get("few_shot_per_class", 5))
+
+    # Precompute SAE activations for few-shot and test examples (if .npy files exist).
+    # Cached as .sae.npz alongside .npy; idempotent across runs.
+    try:
+        from tools.sae_encode import precompute_task
+        precompute_task(ROOT, task_name)
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f"Warning: SAE precompute failed: {e}")
 
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir = RUNS_DIR / task_name / f"run-{run_id}"

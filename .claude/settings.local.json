@@ -2,7 +2,34 @@
   "permissions": {
     "allow": [
       "Bash(where claude:*)",
-      "Bash(claude --version)"
+      "Bash(claude --version)",
+      "Bash(wc -l /Users/divanova/cot-interp-agent/README.md /Users/divanova/cot-interp-agent/scaffold.sh /Users/divanova/cot-interp-agent/agent.bashrc /Users/divanova/cot-interp-agent/src/*.py /Users/divanova/cot-interp-agent/prompts/*.md /Users/divanova/cot-interp-agent/bin/run-tests)",
+      "WebFetch(domain:www.neuronpedia.org)",
+      "WebSearch",
+      "WebFetch(domain:docs.neuronpedia.org)",
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\(type\\(d.get\\('label'\\)\\),d.get\\('label'\\)\\); print\\('content len:', len\\(json.dumps\\(d.get\\('content',d.get\\('prompt',''\\)\\)\\)\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\('label:', d.get\\('label'\\)\\); print\\('token_count:', len\\(d.get\\('tokens',[]\\)\\) if 'tokens' in d else 'N/A'\\)\")",
+      "Bash(python3 *)",
+      "Bash(grep -h \"^import\\\\|^from\" /Users/divanova/cot-interp-agent/src/*.py)",
+      "Bash(grep -n \"get\\(\" /Users/divanova/cot-interp-agent/src/*.py)",
+      "Bash(grep *)",
+      "Bash(bash *)",
+      "Bash(claude --print --dangerously-skip-permissions --system-prompt-file /Users/divanova/cot-interp-agent/prompts/strategy-agent.md --allowed-tools \"Read,Write,Edit,Bash,Glob,Grep\" -p \"hello\")",
+      "Bash(env)",
+      "Bash(claude --print)",
+      "Bash(claude --print --dangerously-skip-permissions)",
+      "Bash(wc -l /Users/divanova/cot-interp-agent/data/termination-ood/few-shot/*.json)",
+      "Bash(wc -l /Users/divanova/cot-interp-agent/data/termination-ood/test/*.json)",
+      "Bash(ls /Users/divanova/cot-interp-agent/data/termination-id/few-shot/*.npy)",
+      "Bash(ls /Users/divanova/cot-interp-agent/data/termination-ood/few-shot/*.npy)",
+      "Bash(wc -c /Users/divanova/cot-interp-agent/agent-traces/termination-ood/run-20260416-230008/*)",
+      "Bash(claude --print --output-format json)",
+      "Bash(claude --print --output-format stream-json)",
+      "Bash(claude --print --output-format stream-json --verbose)",
+      "Bash(chmod +x *)",
+      "Bash(git status *)",
+      "Bash(git stash *)"
     ]
   }
 }

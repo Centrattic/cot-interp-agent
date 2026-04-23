@@ -10,10 +10,13 @@ Your current directory is `strategy/` which contains:
 
 **Read `README.md` first.** It is the single source of truth for this run — the task brief, the workspace layout, **and the list of research tools (with full usage docs) actually enabled for this run**. This system prompt intentionally does not enumerate tools; only those documented in README.md exist on your PATH.
 
-## Available Commands
+## Available Commands (we add these as we get more affordances)
 
-- `test` — Evaluate your strategy against held-out test examples. Each test example will be classified by an independent agent using only the contents of your strategy/ directory. Call this when your strategy is ready.
-- Any research tools listed in `README.md` — see that file for exact usage, limits, and scope.
+- `test` — Evaluate your strategy against held-out test examples. Each test example will be classified by an independent agent using only the contents of your strategy/ directory. **Call this exactly once, when your strategy is finalized.** Do not iterate — put your best effort into the strategy before testing.
+- `sae search <query> [--n N]` — Search SAE feature labels by keyword. Returns top N matching features (default 20) with IDs, scores, and descriptions. Saves results to a CSV.
+- `sae feature <feature_id>` — Show how a specific SAE feature activates across all few-shot examples. Reports max activation value and peak token position per example. Saves results to a CSV.
+- `sae top-features <example_id> [--n N]` — Show the top N most-activated SAE features for a given example (default 20). Reports feature ID, max activation, peak token, and label. Saves results to a CSV.
+- Any other research tools listed in `README.md` — see that file for exact usage, limits, and scope.
 
 When invoking a research tool, `<example_id>` refers to the filename stem from `Examples.csv` (e.g. `ex_001`). You (the strategy agent) may run tools against any few-shot example.
 

@@ -18,6 +18,10 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+# Allow importing from src/ (for tools.sae_encode)
+_SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(_SCRIPT_DIR))
+
 
 def get_env():
     """Read required environment variables set by agent.bashrc."""
@@ -74,6 +78,7 @@ def run_single_test(
                 "index": test_index,
                 "example_id": example["id"],
                 "answer": prior,
+                "ground_truth": example["data"].get("label", ""),
                 "exit_code": 0,
             }
 
@@ -90,6 +95,9 @@ def run_single_test(
         json.dump(redacted, f, indent=2, ensure_ascii=False)
     if example["npy_path"]:
         shutil.copy2(example["npy_path"], test_folder / "example.npy")
+        sae_npz = example["npy_path"].with_suffix(".sae.npz")
+        if sae_npz.exists():
+            shutil.copy2(sae_npz, test_folder / "example.sae.npz")
 
     user_prompt = (
         f"You are classifying one test example (id={example['id']}).\n"
@@ -154,6 +162,7 @@ def run_single_test(
         "index": test_index,
         "example_id": example["id"],
         "answer": answer,
+        "ground_truth": example["data"].get("label", ""),
         "exit_code": exit_code,
     }
 
@@ -202,6 +211,15 @@ def main():
         print("No test examples found.")
         return
 
+    # Precompute SAE activations for test examples before launching agents
+    try:
+        from tools.sae_encode import precompute_dir
+        precompute_dir(data_test_dir)
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f"Warning: SAE precompute for test data failed: {e}")
+
     # Round-robin partition slicing. Global sort order (by filename) is preserved;
     # partition k runs examples at indices [k, k+N, k+2N, ...].
     n_partitions = int(os.environ.get("AGENT_N_PARTITIONS", "1"))
@@ -241,13 +259,13 @@ def main():
                 print(f"  Test {idx} ({result['example_id']}): {status}")
             except Exception as e:
                 print(f"  Test {idx}: ERROR - {e}")
-                results.append({"index": idx, "example_id": "?", "answer": None, "exit_code": -1})
+                results.append({"index": idx, "example_id": "?", "answer": None, "ground_truth": "", "exit_code": -1})
 
     # Sort by index and write results CSV at the run root (sibling of test-NNN/ folders)
     results.sort(key=lambda r: r["index"])
     results_path = run_dir / "results.csv"
     with open(results_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["index", "example_id", "answer", "exit_code"])
+        writer = csv.DictWriter(f, fieldnames=["index", "example_id", "answer", "ground_truth", "exit_code"])
         writer.writeheader()
         writer.writerows(results)
 
@@ -256,8 +274,11 @@ def main():
     yes_count = sum(1 for r in answered if r["answer"] == "yes")
     no_count = sum(1 for r in answered if r["answer"] == "no")
     missing = len(results) - len(answered)
+    correct = sum(1 for r in answered if r["answer"] == r.get("ground_truth"))
 
     print(f"\nResults: {yes_count} yes, {no_count} no, {missing} missing/invalid")
+    if answered:
+        print(f"Accuracy: {correct}/{len(answered)} = {correct/len(answered):.1%}")
     print(f"Details saved to {results_path}")
 
 
