@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from csv import DictWriter
 from pathlib import Path
 
 
@@ -72,3 +73,20 @@ def parse_int(s: str, name: str) -> int:
     except ValueError:
         fail(f"{name} must be an integer, got {s!r}")
         raise  # unreachable, keeps type checkers happy
+
+
+def next_numbered_output_path(prefix: str, suffix: str = ".csv", cwd: Path | None = None) -> Path:
+    base = cwd or Path.cwd()
+    n = 1
+    while True:
+        path = base / f"{prefix}_{n}{suffix}"
+        if not path.exists():
+            return path
+        n += 1
+
+
+def write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)

@@ -22,9 +22,8 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from pathlib import Path
 
-from _common import fail, get_env, load_example
+from _common import fail, get_env, load_example, next_numbered_output_path, write_csv
 
 
 MAX_QUESTION_TOKENS = 20
@@ -41,15 +40,6 @@ def get_tokenizer():
 
     name = os.environ.get("QWEN_TOKENIZER", DEFAULT_TOKENIZER)
     return Tokenizer.from_pretrained(name)
-
-
-def next_output_path(cwd: Path) -> Path:
-    n = 1
-    while True:
-        p = cwd / f"ask_{n}.json"
-        if not p.exists():
-            return p
-        n += 1
 
 
 def check_test_agent_scope(env: dict, example_id: str) -> None:
@@ -161,9 +151,8 @@ def main(argv: list[str]) -> int:
     truncated_ids = resp_ids[:MAX_RESPONSE_TOKENS]
     truncated = tok.decode(truncated_ids)
 
-    cwd = Path.cwd()
-    details_path = next_output_path(cwd)
-    details = {
+    details_path = next_numbered_output_path("ask")
+    row = {
         "status": "success",
         "example_id": example_id,
         "question": question,
@@ -173,7 +162,7 @@ def main(argv: list[str]) -> int:
         "response_tokens": len(truncated_ids),
         "response_raw": raw,
     }
-    details_path.write_text(json.dumps(details, indent=2, ensure_ascii=False))
+    write_csv(details_path, list(row.keys()), [row])
 
     print(f"status: success")
     print(f"response: {truncated}")

@@ -13,7 +13,14 @@ import os
 import sys
 
 from _backend import BackendNotConfigured, get_top10_entropy
-from _common import fail, get_env, load_example, parse_int
+from _common import (
+    fail,
+    get_env,
+    load_example,
+    next_numbered_output_path,
+    parse_int,
+    write_csv,
+)
 
 
 def _check_test_agent_scope(env: dict, example_id: str) -> None:
@@ -44,7 +51,15 @@ def main(argv: list[str]) -> int:
         fail(str(e), code=3)
         return 3
 
-    print(value)
+    out_path = next_numbered_output_path("top10_entropy")
+    row = {
+        "example_id": example_id,
+        "token_position": position,
+        "top10_entropy": value,
+    }
+    write_csv(out_path, list(row.keys()), [row])
+    print(f"top10_entropy: {value:.12f}")
+    print(f"details: {out_path.name}")
     return 0
 
 

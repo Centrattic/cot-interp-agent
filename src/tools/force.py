@@ -30,7 +30,14 @@ import os
 import sys
 
 from _backend import BackendNotConfigured, force_and_next_top10
-from _common import fail, get_env, load_example, parse_int
+from _common import (
+    fail,
+    get_env,
+    load_example,
+    next_numbered_output_path,
+    parse_int,
+    write_csv,
+)
 
 
 MAX_FORCE_TOKENS = 10
@@ -74,10 +81,22 @@ def main(argv: list[str]) -> int:
         fail(str(e), code=3)
         return 3
 
+    out_path = next_numbered_output_path("force")
+    rows = [
+        {
+            "example_id": example_id,
+            "token_position": position,
+            "forced_text": forced,
+            "next_token": next_token,
+            "rank": rank,
+            "token": token,
+            "logprob": lp,
+        }
+        for rank, (token, lp) in enumerate(top10, start=1)
+    ]
+    write_csv(out_path, list(rows[0].keys()), rows)
     print(f"next_token: {next_token!r}")
-    print("top_10:")
-    for token, lp in top10:
-        print(f"  {token!r}\t{lp:.6f}")
+    print(f"details: {out_path.name}")
     return 0
 
 

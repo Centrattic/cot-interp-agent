@@ -13,7 +13,14 @@ import os
 import sys
 
 from _backend import BackendNotConfigured, get_top_10_logits
-from _common import fail, get_env, load_example, parse_int
+from _common import (
+    fail,
+    get_env,
+    load_example,
+    next_numbered_output_path,
+    parse_int,
+    write_csv,
+)
 
 
 def _check_test_agent_scope(env: dict, example_id: str) -> None:
@@ -44,8 +51,20 @@ def main(argv: list[str]) -> int:
         fail(str(e), code=3)
         return 3
 
-    for token, logit in pairs:
-        print(f"{token!r}\t{logit:.6f}")
+    out_path = next_numbered_output_path("top_10_logits")
+    rows = [
+        {
+            "example_id": example_id,
+            "token_position": position,
+            "rank": rank,
+            "token": token,
+            "logit": logit,
+        }
+        for rank, (token, logit) in enumerate(pairs, start=1)
+    ]
+    write_csv(out_path, list(rows[0].keys()), rows)
+    print(f"rows: {len(rows)}")
+    print(f"details: {out_path.name}")
     return 0
 
 

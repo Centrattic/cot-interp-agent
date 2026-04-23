@@ -7,6 +7,7 @@ and coordinates test evaluation.
 Usage:
     python scaffold.py init
     python scaffold.py run <task_name> [--description <desc>]
+    python scaffold.py human-ui --task <task_name>
     python scaffold.py status [<run_id>]
 """
 
@@ -19,6 +20,13 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+from agent_backend import (
+    VALID_AGENT_BACKENDS,
+    build_agent_launch_spec,
+    get_agent_backend,
+    prepare_codex_home,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -204,15 +212,14 @@ Ask a short follow-up question about an example via an oracle model
 - **Test agent:** may only query its own assigned example — `AGENT_EXAMPLE_ID` names it; other IDs are rejected.
 
 **Output contract.** Prints a `status:` line to stdout:
-- On success, also prints `response:` and `details:` — the latter names a new file `ask_<n>.json` in your current directory with the full question, truncated response, raw response, model, and token counts.
+- On success, also prints `response:` and `details:` — the latter names a new file `ask_<n>.csv` in your current directory with columns `status,example_id,question,question_tokens,model,response,response_tokens,response_raw`.
 - On failure (token limit exceeded, wrong example id, etc.), prints the reason and writes **no** file.
 """.strip(),
     "top_10_logits": """### `top_10_logits <example_id> <token_position>`
 
 Print the top-10 tokens and their logit values at `token_position` within
 the example's chain-of-thought, read from a precomputed sidecar
-(`<example_id>.logits.npz` next to the example's JSON). Output is 10 lines
-of `<token_repr>\\t<logit>`, logits descending.
+(`<example_id>.logits.npz` next to the example's JSON).
 
 **Positions are CoT-relative.** `token_position = 0` is the first token of
 `cot_prefix` (what you see in example.json). Valid range is
@@ -226,6 +233,10 @@ of `<token_repr>\\t<logit>`, logits descending.
 - Position must be inside the CoT range (fails with a clear error otherwise).
 - If the sidecar file is missing, the tool fails and tells you to run
   `src/precompute_logits.py` for this task.
+
+**Output**
+- Writes `top_10_logits_<n>.csv` in the current directory with columns
+  `example_id,token_position,rank,token,logit`.
 """.strip(),
     "top10_entropy": """### `top10_entropy <example_id> <token_position>`
 
@@ -246,6 +257,10 @@ Positions are **CoT-relative** (same convention as `top_10_logits`).
   those 10 values), not over the full vocabulary. It is therefore an
   underestimate of true entropy but preserves the relative ordering
   (more peaked vs more spread) which is what matters for this signal.
+
+**Output**
+- Writes `top10_entropy_<n>.csv` in the current directory with columns
+  `example_id,token_position,top10_entropy`.
 """.strip(),
     "force": """### `force <example_id> <token_position> <tokens_to_force...>`
 
@@ -272,12 +287,9 @@ of the CoT (before any continuation)".
   of the scaffold launcher.
 
 **Output**
-```
-next_token: '<token>'
-top_10:
-  '<tok>'\\t<logprob>
-  ...
-```
+- Prints `next_token:` and `details:`.
+- Writes `force_<n>.csv` in the current directory with columns
+  `example_id,token_position,forced_text,next_token,rank,token,logprob`.
 """.strip(),
 }
 
@@ -324,14 +336,14 @@ def generate_readme(task_meta: dict, tools: list[str], examples_index: list[dict
 ## Research Tools
 {render_tools_section(tools)}
 
-## The `test` command
-Running `test` evaluates your current strategy against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the contents of this `strategy/` directory plus its own single test example. Call `test` when STRATEGY.md is ready.
+## The `run-tests` command
+Running `run-tests` evaluates your current strategy against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the contents of this `strategy/` directory plus its own single test example. Call `run-tests` when STRATEGY.md is ready.
 
 ## Instructions
 1. Study the few-shot JSONs in `few-shot/` to understand what distinguishes positive from negative examples.
 2. Write a clear, concrete classification strategy in `STRATEGY.md`. Test agents follow it literally.
 3. Optionally create supporting CSVs or notes in this directory; reference them from STRATEGY.md.
-4. Run `test` when ready.
+4. Run `run-tests` when ready.
 """
     (run_dir / "strategy" / "README.md").write_text(readme, encoding="utf-8")
 
@@ -341,6 +353,7 @@ def _write_bashrc(
     run_dir: Path,
     task_name: str,
     run_id: str,
+    agent_backend: str,
     extra_exports: dict[str, str] | None = None,
 ) -> None:
     """Write the per-agent bash environment file sourced via BASH_ENV."""
@@ -350,6 +363,7 @@ def _write_bashrc(
         f'export AGENT_RUN_DIR="{run_dir.as_posix()}"',
         f'export AGENT_TASK="{task_name}"',
         f'export AGENT_RUN_ID="{run_id}"',
+        f'export AGENT_BACKEND="{agent_backend}"',
         f'export PATH="{BIN_DIR.as_posix()}:$PATH"',
         f'export PYTHON="{Path(sys.executable).as_posix()}"',
     ]
@@ -364,7 +378,7 @@ def _launch_strategy_agent(
     bashrc_path: Path,
     label: str = "",
 ) -> int:
-    """Run one strategy-agent claude subprocess in strategy_dir. Writes
+    """Run one strategy-agent subprocess in strategy_dir. Writes
     trace_base.jsonl / .txt. Returns exit code.
     """
     strategy_prompt_path = PROMPTS_DIR / "strategy-agent.md"
@@ -375,26 +389,27 @@ def _launch_strategy_agent(
     user_prompt = (
         "Read README.md in the current directory for the task brief, available tools, "
         "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
-        "and run `test` when ready."
+        "and run `run-tests` when ready."
     )
     system_prompt = strategy_prompt_path.read_text(encoding="utf-8")
-    cmd = [
-        "claude", "--print", "--dangerously-skip-permissions",
-        "--output-format", "stream-json", "--verbose",
-        "--system-prompt", system_prompt,
-        "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
-    ]
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "strategy"
+    backend = get_agent_backend(env)
+    launch = build_agent_launch_spec(
+        backend=backend,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        add_dirs=[strategy_dir.parent, trace_base.parent] if supports_add_dirs(backend) else None,
+    )
 
     tag = f" [{label}]" if label else ""
-    print(f"Launching strategy agent{tag}...")
+    print(f"Launching strategy agent{tag} with backend={backend}...")
     result = subprocess.run(
-        cmd,
+        launch.cmd,
         cwd=str(strategy_dir),
         env=env,
-        input=user_prompt,
+        input=launch.stdin_text,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -413,6 +428,7 @@ def create_run(
     n_strategies: int = 1,
     strategy_seed_base: int = 0,
     few_shot_per_class: int | None = None,
+    agent_backend: str = "claude",
 ):
     """Create a new agent run.
 
@@ -445,6 +461,7 @@ def create_run(
         "run_id": run_id,
         "created": datetime.now().isoformat(),
         "status": "running",
+        "agent_backend": agent_backend,
         "tools": tools,
         "n_strategies": n_strategies,
         "strategy_seed_base": strategy_seed_base,
@@ -462,6 +479,7 @@ def create_run(
             partition_idx=0, n_partitions=1,
             strategy_dir=run_dir / "strategy",
             bashrc_path=run_dir / "agent.bashrc",
+            agent_backend=agent_backend,
             seed=None, few_shot_per_class=fspc, from_source=False,
         )
         trace_base = trace_dir / "strategy-trace"
@@ -483,6 +501,7 @@ def create_run(
                 partition_idx=k, n_partitions=n_strategies,
                 strategy_dir=part_dir / "strategy",
                 bashrc_path=part_bashrc,
+                agent_backend=agent_backend,
                 seed=strategy_seed_base + k, few_shot_per_class=fspc, from_source=True,
             )
             partition_launch_jobs.append((
@@ -536,6 +555,7 @@ def _setup_partition(
     n_partitions: int,
     strategy_dir: Path,
     bashrc_path: Path,
+    agent_backend: str,
     seed: int | None,
     few_shot_per_class: int,
     from_source: bool,
@@ -572,16 +592,22 @@ def _setup_partition(
     with open(strategy_dir.parent / "partition.json", "w") as f:
         json.dump(part_meta, f, indent=2)
 
+    extra_exports = {
+        "AGENT_PARTITION_INDEX": str(partition_idx),
+        "AGENT_N_PARTITIONS": str(n_partitions),
+    }
+    if agent_backend == "codex":
+        codex_home = prepare_codex_home(strategy_dir.parent / ".codex-home", os.environ)
+        extra_exports["CODEX_HOME"] = codex_home.as_posix()
+
     # agent.bashrc — per-partition; AGENT_RUN_DIR points at the partition dir
     _write_bashrc(
         bashrc_path=bashrc_path,
         run_dir=strategy_dir.parent,
         task_name=task_name,
         run_id=run_dir.name.replace("run-", ""),
-        extra_exports={
-            "AGENT_PARTITION_INDEX": str(partition_idx),
-            "AGENT_N_PARTITIONS": str(n_partitions),
-        },
+        agent_backend=agent_backend,
+        extra_exports=extra_exports,
     )
     return examples_index
 
@@ -649,9 +675,33 @@ def main():
         "--few-shot-per-class", type=int, default=None,
         help="Few-shot size per class per strategy. Default: inherit from metadata.",
     )
+    run_parser.add_argument(
+        "--agent-backend",
+        choices=VALID_AGENT_BACKENDS,
+        default="claude",
+        help="Agent CLI backend to launch (default: claude).",
+    )
 
     status_parser = sub.add_parser("status", help="Show run status")
     status_parser.add_argument("run_id", nargs="?", help="Filter by run ID")
+
+    human_parser = sub.add_parser("human-ui", help="Launch the local human baseline UI")
+    human_parser.add_argument("--task", help="Name of task folder in data/")
+    human_parser.add_argument("--run-dir", help="Open an existing human run directory")
+    human_parser.add_argument(
+        "--tools",
+        default="ask,top_10_logits,top10_entropy,force",
+        help="Comma-separated list of tools to enable for a new run",
+    )
+    human_parser.add_argument("--description", help="Override task description for a new run")
+    human_parser.add_argument(
+        "--ood",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use OOD few-shot/test split rules (default: on)",
+    )
+    human_parser.add_argument("--host", default="127.0.0.1", help="Bind host for the UI")
+    human_parser.add_argument("--port", type=int, default=8000, help="Bind port for the UI")
 
     args = parser.parse_args()
 
@@ -659,14 +709,29 @@ def main():
         init()
     elif args.command == "run":
         tools = [t.strip() for t in args.tools.split(",") if t.strip()]
+        os.environ["AGENT_BACKEND"] = args.agent_backend
         create_run(
             args.task_name, args.description, tools,
             n_strategies=args.n_strategies,
             strategy_seed_base=args.strategy_seed_base,
             few_shot_per_class=args.few_shot_per_class,
+            agent_backend=args.agent_backend,
         )
     elif args.command == "status":
         show_status(args.run_id)
+    elif args.command == "human-ui":
+        cmd = [sys.executable, str(ROOT / "src" / "human_ui.py")]
+        if args.task:
+            cmd.extend(["--task", args.task])
+        if args.run_dir:
+            cmd.extend(["--run-dir", args.run_dir])
+        if args.tools is not None:
+            cmd.extend(["--tools", args.tools])
+        if args.description:
+            cmd.extend(["--description", args.description])
+        cmd.append("--ood" if args.ood else "--no-ood")
+        cmd.extend(["--host", args.host, "--port", str(args.port)])
+        raise SystemExit(subprocess.call(cmd, cwd=str(ROOT)))
     else:
         parser.print_help()
 

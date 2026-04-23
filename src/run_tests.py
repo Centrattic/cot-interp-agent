@@ -2,8 +2,8 @@
 """Parallel test runner.
 
 Reads test examples from data/<task>/test/, creates a folder per test example
-inside the current agent run's test/ directory, and launches a Claude Code
-instance for each one in parallel.
+inside the current agent run's test/ directory, and launches one configured
+agent CLI instance for each one in parallel.
 
 Called by the `test` bash command from within a strategy agent session.
 Expects environment variables: SCAFFOLD_ROOT, AGENT_RUN_DIR, AGENT_TASK, AGENT_RUN_ID
@@ -17,6 +17,8 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+from agent_backend import build_agent_launch_spec, get_agent_backend, supports_add_dirs
 
 
 def get_env():
@@ -100,35 +102,41 @@ def run_single_test(
         f"exactly `yes` or `no`, no other text."
     )
 
-    # --allowed-tools and --add-dir are variadic in the claude CLI, so they
-    # greedily consume trailing positional args. Pass the user prompt via stdin.
-    # --output-format stream-json emits full turn-by-turn events; we write both
-    # the raw JSONL and a rendered .txt per test agent.
     system_prompt = prompt_path.read_text(encoding="utf-8")
-    cmd = [
-        "claude",
-        "--print",
-        "--dangerously-skip-permissions",
-        "--output-format", "stream-json",
-        "--verbose",  # required by --output-format stream-json
-        "--system-prompt", system_prompt,
-        "--add-dir", str(strategy_dir),
-        "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
-    ]
 
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "test"
     env["AGENT_EXAMPLE_ID"] = example["id"]
+    backend = get_agent_backend(env)
+
+    run_cwd = test_folder
+    if backend == "codex":
+        run_cwd = run_dir
+        user_prompt = (
+            f"You are classifying one test example (id={example['id']}).\n"
+            f"The example is in `test-{test_index:03d}/example.json` "
+            f"(ground-truth label has been removed).\n"
+            f"Read `strategy/STRATEGY.md` (and any referenced files) from the run root, "
+            f"apply the strategy to this example, and write your answer to "
+            f"`test-{test_index:03d}/answer.txt` — exactly `yes` or `no`, no other text."
+        )
+
+    launch = build_agent_launch_spec(
+        backend=backend,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        add_dirs=[strategy_dir, trace_dir] if supports_add_dirs(backend) else None,
+    )
 
     trace_base = trace_dir / f"test-{test_index:03d}-trace"
 
     try:
         result = subprocess.run(
-            cmd,
-            cwd=str(test_folder),
+            launch.cmd,
+            cwd=str(run_cwd),
             env=env,
-            input=user_prompt,
+            input=launch.stdin_text,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

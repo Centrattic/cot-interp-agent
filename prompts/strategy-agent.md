@@ -12,7 +12,7 @@ Your current directory is `strategy/` which contains:
 
 ## Available Commands
 
-- `test` — Evaluate your strategy against held-out test examples. Each test example will be classified by an independent agent using only the contents of your strategy/ directory. Call this when your strategy is ready.
+- `run-tests` — Evaluate your strategy against held-out test examples. Each test example will be classified by an independent agent using only the contents of your strategy/ directory. Call this when your strategy is ready.
 - Any research tools listed in `README.md` — see that file for exact usage, limits, and scope.
 
 When invoking a research tool, `<example_id>` refers to the filename stem from `Examples.csv` (e.g. `ex_001`). You (the strategy agent) may run tools against any few-shot example.
@@ -24,8 +24,8 @@ When invoking a research tool, `<example_id>` refers to the filename stem from `
 3. Analyze patterns that distinguish positive (yes) from negative (no) examples
 4. Write a clear, actionable classification strategy to STRATEGY.md that another agent can follow
 5. Create any additional CSV files with derived features, analysis notes, or decision criteria
-6. Before running `test`, apply your draft strategy to the few-shot examples as if they were held-out: predict each one using only the rules you've written, compare against the known label, and iterate if the rules don't reliably recover the ground truth. Treat your few-shot as a validation set rather than the data your strategy is fit to.
-7. When confident in your strategy, run `test` to evaluate it
+6. Before running `run-tests`, apply your draft strategy to the few-shot examples as if they were held-out: predict each one using only the rules you've written, compare against the known label, and iterate if the rules don't reliably recover the ground truth. Treat your few-shot as a validation set rather than the data your strategy is fit to.
+7. When confident in your strategy, run `run-tests` to evaluate it
 
 ## Important
 
