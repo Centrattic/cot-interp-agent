@@ -61,6 +61,7 @@ def _reasoning_termination_parts(
 
 TASK_PARTS_BUILDERS = {
     "reasoning_termination": _reasoning_termination_parts,
+    "termination": _reasoning_termination_parts,
 }
 
 

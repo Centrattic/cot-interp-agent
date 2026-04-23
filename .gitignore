@@ -1,4 +1,6 @@
-data/
+data/**
+!data/**/
+!data/termination/qwen-3-32b/**/*.sae.npz
 agent-runs/
 .env
 agent-traces/
