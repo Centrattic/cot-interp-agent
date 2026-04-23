@@ -36,18 +36,37 @@ def get_env():
     return env
 
 
-def collect_test_examples(data_test_dir: Path) -> list[dict]:
-    """Collect test examples from JSON files."""
+def collect_test_examples(data_test_dir: Path, sae_source_dir: Path | None = None) -> list[dict]:
+    """Collect test examples from JSON files.
+
+    Sidecars (.npy activations, .sae.npz SAE caches) may live either next to
+    the JSON in `data_test_dir` or in a separate `sae_source_dir` (the raw
+    source split the scaffold task was derived from). We check both.
+    """
     examples = []
     for json_file in sorted(data_test_dir.glob("*.json")):
         with open(json_file) as f:
             data = json.load(f)
         example_id = json_file.stem
-        npy_path = data_test_dir / f"{example_id}.npy"
+
+        npy_path = None
+        for d in filter(None, (data_test_dir, sae_source_dir)):
+            candidate = d / f"{example_id}.npy"
+            if candidate.exists():
+                npy_path = candidate
+                break
+        sae_npz_path = None
+        for d in filter(None, (data_test_dir, sae_source_dir)):
+            candidate = d / f"{example_id}.sae.npz"
+            if candidate.exists():
+                sae_npz_path = candidate
+                break
+
         examples.append({
             "id": example_id,
             "json_path": json_file,
-            "npy_path": npy_path if npy_path.exists() else None,
+            "npy_path": npy_path,
+            "sae_npz_path": sae_npz_path,
             "data": data,
         })
     return examples
@@ -95,9 +114,8 @@ def run_single_test(
         json.dump(redacted, f, indent=2, ensure_ascii=False)
     if example["npy_path"]:
         shutil.copy2(example["npy_path"], test_folder / "example.npy")
-        sae_npz = example["npy_path"].with_suffix(".sae.npz")
-        if sae_npz.exists():
-            shutil.copy2(sae_npz, test_folder / "example.sae.npz")
+    if example.get("sae_npz_path"):
+        shutil.copy2(example["sae_npz_path"], test_folder / "example.sae.npz")
 
     user_prompt = (
         f"You are classifying one test example (id={example['id']}).\n"
@@ -197,6 +215,10 @@ def main():
         run_meta_path = run_dir.parent / "run.json"
     task_description = task_name
     test_keep_fields: list[str] | None = None
+    # SAE sidecars (.sae.npz) typically live in the raw source split rather
+    # than next to the whitelisted JSONs in data/<task>/test/. Resolved from
+    # metadata.source + test_split when available.
+    sae_source_dir: Path | None = None
     if run_meta_path.exists():
         with open(run_meta_path) as f:
             run_meta = json.load(f)
@@ -205,8 +227,13 @@ def main():
         tkf = task_meta.get("test_keep_fields")
         if isinstance(tkf, list) and tkf:
             test_keep_fields = tkf
+        src = task_meta.get("source")
+        if src:
+            cand = Path(src) / task_meta.get("test_split", "test")
+            if cand.is_dir():
+                sae_source_dir = cand
 
-    examples = collect_test_examples(data_test_dir)
+    examples = collect_test_examples(data_test_dir, sae_source_dir=sae_source_dir)
     if not examples:
         print("No test examples found.")
         return

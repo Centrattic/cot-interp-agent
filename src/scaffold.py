@@ -120,6 +120,9 @@ def populate_few_shot(
         npy = src_dir / f"{json_file.stem}.npy"
         if npy.exists():
             shutil.copy2(npy, dst_dir / npy.name)
+        sae_npz = src_dir / f"{json_file.stem}.sae.npz"
+        if sae_npz.exists():
+            shutil.copy2(sae_npz, dst_dir / sae_npz.name)
 
     _write_examples_csv(strategy_dir, index)
 
@@ -174,6 +177,9 @@ def populate_few_shot_from_source(
             "label": data["label"],
             "path": f"few-shot/{src_path.name}",
         })
+        sae_npz = src_path.parent / f"{src_path.stem}.sae.npz"
+        if sae_npz.exists():
+            shutil.copy2(sae_npz, dst_dir / sae_npz.name)
 
     _write_examples_csv(strategy_dir, index)
     wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
@@ -281,6 +287,49 @@ top_10:
   '<tok>'\\t<logprob>
   ...
 ```
+""".strip(),
+    "sae": """### `sae` — SAE feature inspection
+
+Three subcommands for exploring a labelled **BatchTopK SAE (width 65,536,
+k=80, trainer_2)** trained on Qwen3-32B `resid_post_layer_32`. Features
+have natural-language labels (19,970 of 65,536 are labelled; the rest
+print as `(unlabeled)`).
+
+#### `sae search <query> [--n N]`
+Full-text search over feature labels. `<query>` is any keywords (e.g.
+`hedging uncertain`, `let me think`, `heterocyclic`). Returns up to `N`
+features whose labels contain the most query words, ranked by overlap.
+Writes `sae_search_<query_slug>.csv` (columns: `feature_id, score, label`)
+in the current directory and prints the top matches to stdout.
+
+#### `sae top-features <example_id> [--n N]`
+Top `N` SAE features active on `<example_id>`, sorted by max activation
+across the CoT. Writes `sae_top_features_<example_id>.csv` (columns:
+`feature_id, max_activation, peak_token_pos, label`) and prints the table
+to stdout. `peak_token_pos` is **CoT-relative** — the same convention
+other tools use, so you can cross-reference.
+
+#### `sae feature <feature_id>`
+Shows how a single feature activates across **every few-shot example in
+your workspace**. Writes `sae_feature_<feature_id>.csv` (columns:
+`example_id, label, max_activation, peak_token_pos`) and prints the table.
+Use this to check whether a feature discriminates label=yes vs label=no.
+
+**Scope**
+- **Strategy agent:** may call all three subcommands on any few-shot `<example_id>`.
+- **Test agent:** `top-features` only on its own `AGENT_EXAMPLE_ID`; `search` and `feature` unrestricted but rarely useful.
+
+**Typical loop**
+1. `sae top-features <some_few_shot_id>` on a yes-labeled and no-labeled
+   example — scan the English labels to form hypotheses.
+2. `sae search "<keywords from a hypothesis>"` to find other features on
+   the same theme.
+3. `sae feature <fid>` to confirm a candidate feature actually separates
+   positives from negatives across the full few-shot set.
+
+**Output format.** All three write a CSV in the current directory and
+print a human-readable summary. CSVs overwrite on repeat (filename is
+keyed by query / fid / example id, not auto-incremented).
 """.strip(),
 }
 
