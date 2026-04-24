@@ -453,6 +453,7 @@ def create_run(
         "tools": tools,
         "n_strategies": n_strategies,
         "strategy_seed_base": strategy_seed_base,
+        "few_shot_per_class": fspc,
         "codex_reasoning_effort": codex_reasoning_effort,
         "task_meta": task_meta,
     }
