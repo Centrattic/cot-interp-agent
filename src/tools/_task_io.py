@@ -15,6 +15,7 @@ Used by:
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 
@@ -27,7 +28,9 @@ def _load_prompt_text(source_root: Path, split: str, question_id: str) -> str:
     falling back to other splits if the id ended up under a different one."""
     prompts_root = source_root.parent / "prompts"
     candidates = [split] + [
-        s for s in ("train", "val", "test", "ood_train", "ood_test") if s != split
+        s
+        for s in ("train", "val", "test", "ood_train", "ood_val", "ood_test")
+        if s != split
     ]
     for s in candidates:
         path = prompts_root / s / f"{question_id}.json"
@@ -59,9 +62,39 @@ def _reasoning_termination_parts(
     return chat + "<think>\n", example["cot_prefix"]
 
 
+def _atypical_cot_length_parts(
+    example: dict, tokenizer, source_root: Path, split: str
+) -> tuple[str, str]:
+    """Return (prefix_str, cot_str) for an atypical_cot_length example.
+
+    These examples store the full generated chain-of-thought in
+    `example['chain_of_thought']`, so the CoT span begins immediately after
+    the standard thinking prompt scaffold.
+    """
+    prompt_text = _load_prompt_text(source_root, split, example["question_id"])
+    chat = tokenizer.apply_chat_template(
+        [
+            {"role": "system", "content": DEFAULT_SYSTEM_MSG},
+            {"role": "user", "content": prompt_text},
+        ],
+        add_generation_prompt=True,
+        tokenize=False,
+    )
+    return chat + "<think>\n", example["chain_of_thought"]
+
+
 TASK_PARTS_BUILDERS = {
     "reasoning_termination": _reasoning_termination_parts,
+    "atypical_cot_length": _atypical_cot_length_parts,
 }
+
+
+def canonical_task_name(task: str) -> str:
+    if task.endswith("_ood"):
+        base = task[:-4]
+        if base in TASK_PARTS_BUILDERS:
+            return base
+    return task
 
 
 def build_prompt_parts(
@@ -73,6 +106,7 @@ def build_prompt_parts(
     stream the model saw when it produced the labelled rollout. CoT-relative
     positions index into `cot_token_ids` directly.
     """
+    task = canonical_task_name(task)
     if task not in TASK_PARTS_BUILDERS:
         raise ValueError(
             f"no prompt-parts builder registered for task {task!r}. "
@@ -89,6 +123,20 @@ def load_task_meta(scaffold_root: Path, task: str) -> tuple[dict, Path, dict[str
 
     `source_root` is the qwen-3-32b / gemma-3-27b model dir under cot-proxy-tasks.
     """
+    run_dir = os.environ.get("AGENT_RUN_DIR", "").strip()
+    if run_dir:
+        run_json = Path(run_dir) / "run.json"
+        if run_json.exists():
+            run_meta = json.loads(run_json.read_text(encoding="utf-8"))
+            meta = run_meta.get("task_meta")
+            if isinstance(meta, dict) and meta.get("source"):
+                source_root = Path(meta["source"])
+                split_of = {
+                    "few-shot": meta.get("few_shot_split", "train"),
+                    "test": meta.get("test_split", "test"),
+                }
+                return meta, source_root, split_of
+
     task_dir = scaffold_root / "data" / task
     meta = json.loads((task_dir / "metadata.json").read_text(encoding="utf-8"))
     source_root = Path(meta["source"])

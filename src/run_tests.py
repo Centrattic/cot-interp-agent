@@ -42,10 +42,12 @@ def collect_test_examples(data_test_dir: Path) -> list[dict]:
             data = json.load(f)
         example_id = json_file.stem
         npy_path = data_test_dir / f"{example_id}.npy"
+        logits_path = data_test_dir / f"{example_id}.logits.npz"
         examples.append({
             "id": example_id,
             "json_path": json_file,
             "npy_path": npy_path if npy_path.exists() else None,
+            "logits_path": logits_path if logits_path.exists() else None,
             "data": data,
         })
     return examples
@@ -92,6 +94,8 @@ def run_single_test(
         json.dump(redacted, f, indent=2, ensure_ascii=False)
     if example["npy_path"]:
         shutil.copy2(example["npy_path"], test_folder / "example.npy")
+    if example.get("logits_path"):
+        shutil.copy2(example["logits_path"], test_folder / example["logits_path"].name)
 
     user_prompt = (
         f"You are classifying one test example (id={example['id']}).\n"
@@ -173,7 +177,8 @@ def main():
     task_name = env["AGENT_TASK"]
     run_id = env["AGENT_RUN_ID"]
 
-    data_test_dir = scaffold_root / "data" / task_name / "test"
+    data_task = os.environ.get("AGENT_DATA_TASK", task_name)
+    data_test_dir = scaffold_root / "data" / data_task / "test"
     strategy_dir = run_dir / "strategy"
     trace_dir = scaffold_root / "agent-traces" / task_name / f"run-{run_id}"
     prompt_path = scaffold_root / "prompts" / "test-agent.md"
@@ -225,7 +230,9 @@ def main():
     trace_dir.mkdir(parents=True, exist_ok=True)
     results = []
 
-    max_workers = min(len(examples), int(os.environ.get("AGENT_TEST_MAX_WORKERS", "10")))
+    agent_backend = os.environ.get("AGENT_BACKEND", "").strip().lower()
+    default_max_workers = "2" if agent_backend == "codex" else "10"
+    max_workers = min(len(examples), int(os.environ.get("AGENT_TEST_MAX_WORKERS", default_max_workers)))
     # ThreadPoolExecutor (not ProcessPoolExecutor): work is I/O-bound (subprocess.run),
     # threads are simpler, avoid pickling, and don't leak grandchild pipe handles across
     # worker processes (which previously deadlocked shutdown on Windows).
@@ -267,6 +274,8 @@ def main():
 
     print(f"\nResults: {yes_count} yes, {no_count} no, {missing} missing/invalid")
     print(f"Details saved to {results_path}")
+    if missing:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

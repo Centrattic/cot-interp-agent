@@ -26,6 +26,7 @@ from agent_backend import (
     build_agent_launch_spec,
     get_agent_backend,
     prepare_codex_home,
+    supports_add_dirs,
 )
 
 
@@ -56,6 +57,11 @@ def load_dotenv(path: Path) -> None:
 
 
 load_dotenv(ENV_FILE)
+
+
+def make_run_id() -> str:
+    """Return a timestamped run id with sub-second precision to avoid collisions."""
+    return datetime.now().strftime("%Y%m%d-%H%M%S-%f")
 
 
 def init():
@@ -91,13 +97,23 @@ def _apply_whitelist(data: dict, test_keep_fields: list[str] | None) -> dict:
     return filtered
 
 
+def _copy_optional_sidecars(src_json: Path, dst_dir: Path) -> None:
+    for suffix in (".npy", ".logits.npz"):
+        src = src_json.with_suffix(suffix)
+        if src.exists():
+            shutil.copy2(src, dst_dir / src.name)
+
+
 def populate_few_shot(
     task_name: str,
     strategy_dir: Path,
+    *,
+    seed: int,
+    per_class: int,
+    label_map: dict,
     test_keep_fields: list[str] | None = None,
 ) -> list[dict]:
-    """Legacy single-run mode: copy data/<task>/few-shot/ (already-sampled at ingest
-    time) into strategy/few-shot/ with the whitelist applied.
+    """Sample a balanced few-shot subset from the cached data/<task>/few-shot/ pool.
 
     Returns a list of {id, label, path} entries (used for Examples.csv).
     """
@@ -111,9 +127,10 @@ def populate_few_shot(
         (strategy_dir / "Examples.csv").write_text("id,label,path\n")
         return index
 
-    for json_file in sorted(src_dir.glob("*.json")):
-        with open(json_file, encoding="utf-8") as f:
-            data = json.load(f)
+    from ingest_cot_proxy import sample_balanced
+
+    picked = sample_balanced(src_dir, per_class, seed, label_map)
+    for json_file, data in picked:
         filtered = _apply_whitelist(data, test_keep_fields)
         with open(dst_dir / json_file.name, "w", encoding="utf-8") as f:
             json.dump(filtered, f, indent=2, ensure_ascii=False)
@@ -122,14 +139,12 @@ def populate_few_shot(
             "label": data.get("label", ""),
             "path": f"few-shot/{json_file.name}",
         })
-        npy = src_dir / f"{json_file.stem}.npy"
-        if npy.exists():
-            shutil.copy2(npy, dst_dir / npy.name)
+        _copy_optional_sidecars(json_file, dst_dir)
 
     _write_examples_csv(strategy_dir, index)
 
     wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
-    print(f"Wrote {len(index)} few-shot examples into {dst_dir}{wl}")
+    print(f"Sampled {len(index)} cached few-shot examples from {src_dir} (seed={seed}){wl}")
     return index
 
 
@@ -140,50 +155,22 @@ def populate_few_shot_from_source(
     per_class: int,
     test_keep_fields: list[str] | None,
 ) -> list[dict]:
-    """Multi-partition mode: sample a fresh balanced few-shot set directly from the
-    cot-proxy-tasks source split (per metadata.few_shot_split). Different `seed`
-    values → different sampled sets per partition.
-
-    Requires metadata.json to have `source`, `few_shot_split`, and `label_map`.
-    """
-    source = Path(task_meta["source"])
-    split = task_meta.get("few_shot_split", "train")
-    src_dir = source / split
-    if not src_dir.is_dir():
-        raise RuntimeError(
-            f"Source few-shot split not found: {src_dir}. "
-            "Multi-partition requires metadata.json with 'source' and 'few_shot_split'."
-        )
-
-    # Parse label_map. JSON keys are always strings; normalize back to int where applicable.
+    """Backward-compatible wrapper: sample from the cached data pool, not raw source."""
     raw_label_map = task_meta.get("label_map", {})
     def _key(k):
-        try: return int(k)
+        try:
+            return int(k)
         except (ValueError, TypeError): return k
     label_map = {_key(k): int(v) for k, v in raw_label_map.items()}
-
-    # Import sampler from ingest_cot_proxy (co-located in src/)
-    from ingest_cot_proxy import sample_balanced
-    picked = sample_balanced(src_dir, per_class, seed, label_map)
-
-    dst_dir = strategy_dir / "few-shot"
-    dst_dir.mkdir(parents=True, exist_ok=True)
-
-    index = []
-    for src_path, data in picked:
-        filtered = _apply_whitelist(data, test_keep_fields)
-        with open(dst_dir / src_path.name, "w", encoding="utf-8") as f:
-            json.dump(filtered, f, indent=2, ensure_ascii=False)
-        index.append({
-            "id": src_path.stem,
-            "label": data["label"],
-            "path": f"few-shot/{src_path.name}",
-        })
-
-    _write_examples_csv(strategy_dir, index)
-    wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
-    print(f"Sampled {len(index)} few-shot from {split}/ (seed={seed}){wl}")
-    return index
+    data_task = task_meta.get("data_task", task_meta.get("name"))
+    return populate_few_shot(
+        str(data_task),
+        strategy_dir,
+        seed=seed,
+        per_class=per_class,
+        label_map=label_map,
+        test_keep_fields=test_keep_fields,
+    )
 
 
 def _write_examples_csv(strategy_dir: Path, index: list[dict]) -> None:
@@ -217,7 +204,7 @@ Ask a short follow-up question about an example via an oracle model
 """.strip(),
     "top_10_logits": """### `top_10_logits <example_id> <token_position>`
 
-Print the top-10 tokens and their logit values at `token_position` within
+Print the top-10 tokens and their logprob values at `token_position` within
 the example's chain-of-thought, read from a precomputed sidecar
 (`<example_id>.logits.npz` next to the example's JSON).
 
@@ -236,7 +223,7 @@ the example's chain-of-thought, read from a precomputed sidecar
 
 **Output**
 - Writes `top_10_logits_<n>.csv` in the current directory with columns
-  `example_id,token_position,rank,token,logit`.
+  `example_id,token_position,rank,token,logprob`.
 """.strip(),
     "top10_entropy": """### `top10_entropy <example_id> <token_position>`
 
@@ -253,7 +240,7 @@ Positions are **CoT-relative** (same convention as `top_10_logits`).
 - **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
 
 **Note**
-- Entropy is computed over only the top-10 logits (softmax restricted to
+- Entropy is computed over only the top-10 logprobs (softmax restricted to
   those 10 values), not over the full vocabulary. It is therefore an
   underestimate of true entropy but preserves the relative ordering
   (more peaked vs more spread) which is what matters for this signal.
@@ -289,7 +276,7 @@ of the CoT (before any continuation)".
 **Output**
 - Prints `next_token:` and `details:`.
 - Writes `force_<n>.csv` in the current directory with columns
-  `example_id,token_position,forced_text,next_token,rank,token,logprob`.
+  `example_id,token_position,forced_text,next_token,next_token_logprob,top_10_logprobs_json`.
 """.strip(),
 }
 
@@ -429,6 +416,7 @@ def create_run(
     strategy_seed_base: int = 0,
     few_shot_per_class: int | None = None,
     agent_backend: str = "claude",
+    codex_reasoning_effort: str | None = None,
 ):
     """Create a new agent run.
 
@@ -448,9 +436,9 @@ def create_run(
     if description:
         task_meta["description"] = description
     fspc = few_shot_per_class if few_shot_per_class is not None else \
-        int(task_meta.get("few_shot_per_class", 5))
+        int(task_meta.get("strategy_few_shot_per_class", task_meta.get("few_shot_per_class", 5)))
 
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_id = make_run_id()
     run_dir = RUNS_DIR / task_name / f"run-{run_id}"
     trace_dir = TRACES_DIR / task_name / f"run-{run_id}"
     trace_dir.mkdir(parents=True, exist_ok=True)
@@ -465,6 +453,7 @@ def create_run(
         "tools": tools,
         "n_strategies": n_strategies,
         "strategy_seed_base": strategy_seed_base,
+        "codex_reasoning_effort": codex_reasoning_effort,
         "task_meta": task_meta,
     }
     with open(run_dir / "run.json", "w") as f:
@@ -480,6 +469,7 @@ def create_run(
             strategy_dir=run_dir / "strategy",
             bashrc_path=run_dir / "agent.bashrc",
             agent_backend=agent_backend,
+            codex_reasoning_effort=codex_reasoning_effort,
             seed=None, few_shot_per_class=fspc, from_source=False,
         )
         trace_base = trace_dir / "strategy-trace"
@@ -488,7 +478,23 @@ def create_run(
             trace_base=trace_base,
             bashrc_path=run_dir / "agent.bashrc",
         )
-        run_meta["status"] = "completed" if code == 0 else "failed"
+        run_meta["strategy_exit_code"] = code
+        try:
+            from score_run import score_run
+            score_info = score_run(run_dir, task_meta)
+            run_meta["agg_miss"] = score_info.get("agg_miss")
+            run_meta["total_tests"] = score_info.get("total_tests")
+        except Exception as e:
+            print(f"Note: scoring skipped/failed: {e}")
+            score_info = None
+        if code == 0 and score_info and score_info.get("agg_miss", 1) == 0:
+            run_meta["status"] = "completed"
+        elif score_info and (
+            score_info["aggregate"]["n"] > 0 or score_info.get("agg_miss", 0) > 0
+        ):
+            run_meta["status"] = "partial"
+        else:
+            run_meta["status"] = "failed"
     else:
         # Multi-partition: set up N partition dirs, launch their strategy agents in parallel.
         max_parallel = int(os.environ.get("AGENT_STRATEGY_PARALLEL", "10"))
@@ -502,6 +508,7 @@ def create_run(
                 strategy_dir=part_dir / "strategy",
                 bashrc_path=part_bashrc,
                 agent_backend=agent_backend,
+                codex_reasoning_effort=codex_reasoning_effort,
                 seed=strategy_seed_base + k, few_shot_per_class=fspc, from_source=True,
             )
             partition_launch_jobs.append((
@@ -533,8 +540,12 @@ def create_run(
 
         # Aggregate scoring (writes results.csv + summary.txt at run_dir)
         try:
-            from score_run import score_partitioned_run
-            score_partitioned_run(run_dir, task_meta)
+            from score_run import score_run
+            score_info = score_run(run_dir, task_meta)
+            run_meta["agg_miss"] = score_info.get("agg_miss")
+            run_meta["total_tests"] = score_info.get("total_tests")
+            if score_info.get("agg_miss", 0) > 0:
+                run_meta["status"] = "partial"
         except Exception as e:
             print(f"Note: aggregate scoring skipped/failed: {e}")
 
@@ -556,6 +567,7 @@ def _setup_partition(
     strategy_dir: Path,
     bashrc_path: Path,
     agent_backend: str,
+    codex_reasoning_effort: str | None,
     seed: int | None,
     few_shot_per_class: int,
     from_source: bool,
@@ -572,8 +584,20 @@ def _setup_partition(
             test_keep_fields=task_meta.get("test_keep_fields"),
         )
     else:
+        raw_label_map = task_meta.get("label_map", {})
+        def _key(k):
+            try:
+                return int(k)
+            except (ValueError, TypeError):
+                return k
+        label_map = {_key(k): int(v) for k, v in raw_label_map.items()}
         examples_index = populate_few_shot(
-            task_name, strategy_dir, test_keep_fields=task_meta.get("test_keep_fields"),
+            str(task_meta.get("data_task", task_name)),
+            strategy_dir,
+            seed=seed if seed is not None else 0,
+            per_class=few_shot_per_class,
+            label_map=label_map,
+            test_keep_fields=task_meta.get("test_keep_fields"),
         )
 
     generate_readme(task_meta, tools, examples_index, strategy_dir.parent)
@@ -595,10 +619,13 @@ def _setup_partition(
     extra_exports = {
         "AGENT_PARTITION_INDEX": str(partition_idx),
         "AGENT_N_PARTITIONS": str(n_partitions),
+        "AGENT_DATA_TASK": str(task_meta.get("data_task", task_name)),
     }
     if agent_backend == "codex":
         codex_home = prepare_codex_home(strategy_dir.parent / ".codex-home", os.environ)
         extra_exports["CODEX_HOME"] = codex_home.as_posix()
+        if codex_reasoning_effort:
+            extra_exports["CODEX_REASONING_EFFORT"] = codex_reasoning_effort
 
     # agent.bashrc — per-partition; AGENT_RUN_DIR points at the partition dir
     _write_bashrc(
@@ -681,6 +708,11 @@ def main():
         default="claude",
         help="Agent CLI backend to launch (default: claude).",
     )
+    run_parser.add_argument(
+        "--codex-reasoning-effort",
+        choices=("low", "medium", "high", "xhigh"),
+        help="Optional Codex reasoning effort override. Only applies when --agent-backend=codex.",
+    )
 
     status_parser = sub.add_parser("status", help="Show run status")
     status_parser.add_argument("run_id", nargs="?", help="Filter by run ID")
@@ -716,6 +748,7 @@ def main():
             strategy_seed_base=args.strategy_seed_base,
             few_shot_per_class=args.few_shot_per_class,
             agent_backend=args.agent_backend,
+            codex_reasoning_effort=args.codex_reasoning_effort,
         )
     elif args.command == "status":
         show_status(args.run_id)

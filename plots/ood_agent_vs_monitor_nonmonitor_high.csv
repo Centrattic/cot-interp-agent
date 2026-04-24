@@ -1,0 +1,13 @@
+csv_task,run_task,label,run,agent_gmean2,agent_n_scored,agent_n_total,monitor_name,monitor_gmean2,nonmonitor_name,nonmonitor_gmean2
+1_reasoning_termination,reasoning_termination_ood,"Reasoning
+termination",run-20260424-162647-288149,0.24970273483947683,58,58,Zero-shot LLMs (conf),0.1,Attention probes,0.724
+2_self_deletion,gemma_self_deletion_ood,"Self
+deletion",run-20260424-162647-292785,0.5247999999999999,100,100,Few-shot LLMs (conf),0.447,SAE probes,0.664
+3_follow_up_response,followup_confidence_ood,"Follow-up
+response",run-20260424-163302-968137,0.19318181818181818,88,88,Zero-shot LLMs (conf),0.239,Linear probes,0.085
+5_stanford_hint,stanford_hint_ood,"Stanford
+hint",run-20260424-163546-537946,0.41359999999999997,100,100,Few-shot LLMs (conf),0.522,Attention probes,0.665
+6_atypical_answer,atypical_answer_ood,"Atypical
+answer",run-20260424-164336-413508,0.2,100,100,Few-shot LLMs (binary),0.292,TF-IDF,0.241
+7_atypical_cot_length,atypical_cot_length_ood,"Atypical
+CoT length",run-20260424-164555-541763,0.3268,100,100,Few-shot LLMs (binary),0.419,Attention probes,0.345

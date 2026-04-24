@@ -1,0 +1,13 @@
+task,setting,gmean2,path
+Reasoning termination,10-shot,0.25,/home/riya/Riya/research/cot-interp-agent/agent-runs/reasoning_termination_ood/run-20260424-162647-288149/summary.txt
+Reasoning termination,40-shot,0.404,/home/riya/Riya/research/cot-interp-agent/agent-runs/reasoning_termination_ood/run-20260424-154451-520105/summary.txt
+Self deletion,10-shot,0.525,/home/riya/Riya/research/cot-interp-agent/agent-runs/gemma_self_deletion_ood/run-20260424-162647-292785/summary.txt
+Self deletion,40-shot,0.686,/home/riya/Riya/research/cot-interp-agent/agent-runs/gemma_self_deletion_ood/run-20260424-171856-555777/summary.txt
+Follow-up,10-shot,0.193,/home/riya/Riya/research/cot-interp-agent/agent-runs/followup_confidence_ood/run-20260424-163302-968137/summary.txt
+Follow-up,40-shot,0.258,/home/riya/Riya/research/cot-interp-agent/agent-runs/followup_confidence_ood/run-20260424-171856-557516/summary.txt
+Stanford hint,10-shot,0.414,/home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint_ood/run-20260424-163546-537946/summary.txt
+Stanford hint,40-shot,0.681,/home/riya/Riya/research/cot-interp-agent/agent-runs/stanford_hint_ood/run-20260424-171856-781613/summary.txt
+Atypical answer,10-shot,0.2,/home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_answer_ood/run-20260424-164336-413508/summary.txt
+Atypical answer,40-shot,0.266,/home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_answer_ood/run-20260424-171856-789996/summary.txt
+Atypical CoT length,10-shot,0.327,/home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_cot_length_ood/run-20260424-164555-541763/summary.txt
+Atypical CoT length,40-shot,0.0,/home/riya/Riya/research/cot-interp-agent/agent-runs/atypical_cot_length_ood/run-20260424-171856-771025/summary.txt

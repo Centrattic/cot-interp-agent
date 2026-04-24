@@ -11,5 +11,17 @@ if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
     exit 1
 fi
 
+if [[ -f "$SCAFFOLD_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$SCAFFOLD_ROOT/.env"
+    set +a
+fi
+
+if [[ -n "${AGENT_RUN_DIR:-}" && -f "${AGENT_RUN_DIR}/agent.bashrc" ]]; then
+    # shellcheck disable=SC1090
+    source "${AGENT_RUN_DIR}/agent.bashrc"
+fi
+
 PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
 exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/force.py" "$@"

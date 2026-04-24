@@ -7,8 +7,8 @@ Source layout (per dataset_id in ../cot-proxy-tasks/datasets/):
 Scaffold layout written:
     data/<task_name>/
         metadata.json          — includes description, label_map, test_keep_fields
-        few-shot/*.json        — balanced sample from train
-        test/*.json            — sample from test (all fields preserved; label normalized to 0/1)
+        few-shot/*.json        — cached few-shot POOL from train/val/etc
+        test/*.json            — cached test POOL (all fields preserved; label normalized to 0/1)
 
 The `test/` JSONs keep ALL original fields so later analysis can reuse them.
 At test-agent launch time, run_tests.py filters each example.json to the fields
@@ -254,9 +254,10 @@ def write_items(items: list[tuple[Path, dict]], dst_dir: Path) -> int:
 
 def ingest(
     preset_name: str,
-    few_shot_per_class: int,
+    few_shot_pool_per_class: int,
     test_n: int | None,
     seed: int,
+    strategy_few_shot_per_class: int = 5,
     few_shot_split: str = "train",
     test_split: str = "test",
     task_name: str | None = None,
@@ -287,12 +288,15 @@ def ingest(
 
     label_map = preset["label_map"]
 
-    # Few-shot: balanced sample from train
-    few_shot_items = sample_balanced(train_dir, few_shot_per_class, seed, label_map)
+    # Few-shot pool: balanced sample from the chosen source split.
+    few_shot_items = sample_balanced(train_dir, few_shot_pool_per_class, seed, label_map)
     write_items(few_shot_items, few_shot_dst)
-    print(f"[{out_name}] {few_shot_per_class}+{few_shot_per_class} few-shot written to {few_shot_dst}")
+    print(
+        f"[{out_name}] cached few-shot pool written to {few_shot_dst} "
+        f"({few_shot_pool_per_class}+{few_shot_pool_per_class} examples)"
+    )
 
-    # Test: balanced sample from test (or all if n is None)
+    # Test pool: balanced sample from the chosen test split (or all if n is None)
     test_items = sample_test(test_dir, test_n, seed, label_map)
     write_items(test_items, test_dst)
     class_counts = {0: 0, 1: 0}
@@ -313,7 +317,11 @@ def ingest(
         "test_keep_fields": list(preset["test_keep_fields"]),
         "few_shot_split": few_shot_split,
         "test_split": test_split,
-        "few_shot_per_class": few_shot_per_class,
+        "few_shot_pool_per_class": few_shot_pool_per_class,
+        "strategy_few_shot_per_class": strategy_few_shot_per_class,
+        # Backward-compatible key: runtime sampling code used to read this
+        # field directly as the per-strategy sample size.
+        "few_shot_per_class": strategy_few_shot_per_class,
         "test_n": test_n,
         "seed": seed,
     }
@@ -326,7 +334,18 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--preset", help="Task preset name (see --list-presets)")
     p.add_argument("--list-presets", action="store_true")
-    p.add_argument("--few-shot-per-class", type=int, default=5)
+    p.add_argument(
+        "--few-shot-per-class",
+        type=int,
+        default=50,
+        help="Size of the cached few-shot pool per class written into data/<task>/few-shot/",
+    )
+    p.add_argument(
+        "--strategy-few-shot-per-class",
+        type=int,
+        default=5,
+        help="How many few-shot examples per class each strategy agent should sample from the cached pool",
+    )
     p.add_argument("--test-n", type=int, default=None,
                    help="Cap test-set size (balanced); default = all")
     p.add_argument("--seed", type=int, default=0)
@@ -350,7 +369,11 @@ def main():
         p.error("--preset is required (or use --list-presets)")
 
     ingest(
-        args.preset, args.few_shot_per_class, args.test_n, args.seed,
+        args.preset,
+        args.few_shot_per_class,
+        args.test_n,
+        args.seed,
+        strategy_few_shot_per_class=args.strategy_few_shot_per_class,
         few_shot_split=args.few_shot_split, test_split=args.test_split,
         task_name=args.task_name,
     )

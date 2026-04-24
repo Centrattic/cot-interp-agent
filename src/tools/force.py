@@ -26,6 +26,7 @@ in the environment.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 
@@ -82,19 +83,19 @@ def main(argv: list[str]) -> int:
         return 3
 
     out_path = next_numbered_output_path("force")
-    rows = [
-        {
-            "example_id": example_id,
-            "token_position": position,
-            "forced_text": forced,
-            "next_token": next_token,
-            "rank": rank,
-            "token": token,
-            "logprob": lp,
-        }
-        for rank, (token, lp) in enumerate(top10, start=1)
-    ]
-    write_csv(out_path, list(rows[0].keys()), rows)
+    top10_json = json.dumps(
+        [{"rank": rank, "token": token, "logprob": lp} for rank, (token, lp) in enumerate(top10, start=1)],
+        ensure_ascii=False,
+    )
+    row = {
+        "example_id": example_id,
+        "token_position": position,
+        "forced_text": forced,
+        "next_token": next_token,
+        "next_token_logprob": float(top10[0][1]),
+        "top_10_logprobs_json": top10_json,
+    }
+    write_csv(out_path, list(row.keys()), [row])
     print(f"next_token: {next_token!r}")
     print(f"details: {out_path.name}")
     return 0

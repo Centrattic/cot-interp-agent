@@ -1,4 +1,4 @@
-"""`top_10_logits` tool — show the top-10 tokens and their logits at a position.
+"""`top_10_logits` tool — show the top-10 tokens and their logprobs at a position.
 
 Reads precomputed logits written by `src/precompute_logits.py` (a sidecar
 `<example_id>.logits.npz` next to the example JSON).
@@ -58,9 +58,9 @@ def main(argv: list[str]) -> int:
             "token_position": position,
             "rank": rank,
             "token": token,
-            "logit": logit,
+            "logprob": logprob,
         }
-        for rank, (token, logit) in enumerate(pairs, start=1)
+        for rank, (token, logprob) in enumerate(pairs, start=1)
     ]
     write_csv(out_path, list(rows[0].keys()), rows)
     print(f"rows: {len(rows)}")

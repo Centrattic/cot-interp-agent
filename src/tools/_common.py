@@ -1,4 +1,4 @@
-"""Shared helpers for custom agent tools (force / logit / entropy / ask).
+"""Shared helpers for custom agent tools (ask / force / top_10_logits / top10_entropy).
 
 Responsibilities:
 - Resolve the correct example directory based on AGENT_TYPE
@@ -44,7 +44,28 @@ def get_env() -> dict:
 
 
 def example_dir(env: dict) -> Path:
-    """Return the data directory this agent may query, based on AGENT_TYPE."""
+    """Return the example directory this agent may query.
+
+    Prefer the agent workspace copy when present:
+    - strategy: `<cwd>/few-shot/` or `<AGENT_RUN_DIR>/strategy/few-shot/`
+    - test: current test folder if it contains `example.json`
+
+    Fall back to `data/<task>/{few-shot,test}` for legacy runs.
+    """
+    cwd = Path.cwd()
+    if env["AGENT_TYPE"] == "strategy":
+        local = cwd / "few-shot"
+        if local.exists():
+            return local
+        run_dir = os.environ.get("AGENT_RUN_DIR", "").strip()
+        if run_dir:
+            run_local = Path(run_dir) / "strategy" / "few-shot"
+            if run_local.exists():
+                return run_local
+    else:
+        if (cwd / "example.json").exists():
+            return cwd
+
     scaffold_root = Path(env["SCAFFOLD_ROOT"])
     task = env["AGENT_TASK"]
     subdir = "few-shot" if env["AGENT_TYPE"] == "strategy" else "test"
@@ -57,6 +78,9 @@ def example_dir(env: dict) -> Path:
 def load_example(env: dict, example_id: str) -> dict:
     """Load the JSON record for an example ID from the agent's allowed scope."""
     base = example_dir(env)
+    if env["AGENT_TYPE"] == "test" and (base / "example.json").exists():
+        with open(base / "example.json") as f:
+            return json.load(f)
     json_path = base / f"{example_id}.json"
     if not json_path.exists():
         fail(

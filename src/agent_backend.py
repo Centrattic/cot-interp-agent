@@ -86,10 +86,10 @@ def _build_codex_command(prompt_text: str, add_dirs: list[Path] | None) -> Agent
         cmd = [
             os.environ.get("CODEX_BIN", "codex"),
             "exec",
-            "--full-auto",
             "--json",
             "--skip-git-repo-check",
             "--ephemeral",
+            "--dangerously-bypass-approvals-and-sandbox",
             "-",
         ]
         for extra_dir in add_dirs or []:
@@ -97,6 +97,9 @@ def _build_codex_command(prompt_text: str, add_dirs: list[Path] | None) -> Agent
         model = os.environ.get("CODEX_MODEL", "").strip()
         if model:
             cmd.extend(["-m", model])
+        reasoning_effort = os.environ.get("CODEX_REASONING_EFFORT", "").strip()
+        if reasoning_effort:
+            cmd.extend(["-c", f'model_reasoning_effort="{reasoning_effort}"'])
         stdin_text = prompt_text
     return AgentLaunchSpec(cmd=cmd, stdin_text=stdin_text)
 

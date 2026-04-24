@@ -2,7 +2,7 @@
 
 Read-only (precomputed sidecar) call sites — used by `top_10_logits` and
 `top10_entropy`:
-  - get_top_10_logits(env, example_id, example, position) -> list[(token, logit)]
+  - get_top_10_logits(env, example_id, example, position) -> list[(token, logprob)]
   - get_top10_entropy(env, example_id, example, position) -> float
 
 Both read from `<example_id>.logits.npz` written by src/precompute_logits.py.
@@ -33,19 +33,42 @@ class BackendNotConfigured(RuntimeError):
 
 
 # ---------------------------------------------------------------------------
-# Precomputed logits (read-only path) — top_10_logits / top10_entropy
+# Precomputed top-logprobs (read-only path) — top_10_logits / top10_entropy
 # ---------------------------------------------------------------------------
 
 def _logits_path(env: dict, example_id: str) -> Path:
-    return example_dir(env) / f"{example_id}.logits.npz"
+    local = example_dir(env) / f"{example_id}.logits.npz"
+    if local.exists():
+        return local
+
+    scaffold_root = Path(env["SCAFFOLD_ROOT"])
+    task = os.environ.get("AGENT_DATA_TASK", env["AGENT_TASK"])
+    subdir = "few-shot" if env["AGENT_TYPE"] == "strategy" else "test"
+    fallback = scaffold_root / "data" / task / subdir / f"{example_id}.logits.npz"
+    if fallback.exists():
+        return fallback
+
+    # Human OOD runs may copy examples from a different scaffold task directory
+    # (for example reasoning_termination using ood_val examples that live under
+    # reasoning_termination_ood). If the exact sidecar is already somewhere
+    # under data/, reuse it instead of requiring a duplicate copy next to the
+    # run-local JSON.
+    matches = sorted((scaffold_root / "data").glob(f"**/{example_id}.logits.npz"))
+    if matches:
+        return matches[0]
+    return fallback
 
 
 def _load_logits(env: dict, example_id: str) -> tuple[np.ndarray, np.ndarray]:
-    """Return (top_tokens, top_logits) arrays of shape (N, 10) each."""
+    """Return (top_tokens, top_logits) arrays of shape (N, 10) each.
+
+    Historical note: the `.npz` field name is `top_logits`, but the stored
+    numeric values are actually logprobs.
+    """
     path = _logits_path(env, example_id)
     if not path.exists():
         raise BackendNotConfigured(
-            f"precomputed logits not found: {path}. "
+            f"precomputed logprobs not found: {path}. "
             f"Run `python src/precompute_logits.py --task {env['AGENT_TASK']}` "
             f"to populate <example_id>.logits.npz sidecars."
         )
@@ -56,11 +79,15 @@ def _load_logits(env: dict, example_id: str) -> tuple[np.ndarray, np.ndarray]:
     top_logits = npz["top_logits"]
     if top_tokens.shape != top_logits.shape or top_tokens.shape[1] != 10:
         raise BackendNotConfigured(
-            f"logits file {path} has unexpected shape "
+            f"logprobs file {path} has unexpected shape "
             f"(tokens={top_tokens.shape}, logits={top_logits.shape}); "
             f"expected (N, 10) for both."
         )
     return top_tokens, top_logits
+
+
+def _is_missing_precomputed_logits_error(exc: BackendNotConfigured) -> bool:
+    return "precomputed logprobs not found:" in str(exc)
 
 
 def _position_slice(
@@ -78,10 +105,15 @@ def _position_slice(
 def get_top_10_logits(
     env: dict, example_id: str, example: dict, position: int
 ) -> list[tuple[str, float]]:
-    """Return the top-10 (token, logit) pairs at `position`, descending."""
-    top_tokens, top_logits = _load_logits(env, example_id)
-    toks, logs = _position_slice(top_tokens, top_logits, position, example_id)
-    return [(str(t), float(l)) for t, l in zip(toks, logs)]
+    """Return the top-10 (token, logprob) pairs at `position`, descending."""
+    try:
+        top_tokens, top_logits = _load_logits(env, example_id)
+        toks, logs = _position_slice(top_tokens, top_logits, position, example_id)
+        return [(str(t), float(l)) for t, l in zip(toks, logs)]
+    except BackendNotConfigured as exc:
+        if not _is_missing_precomputed_logits_error(exc):
+            raise
+        return _get_topk_live(env, example_id, example, position)
 
 
 def get_top10_entropy(
@@ -89,12 +121,19 @@ def get_top10_entropy(
 ) -> float:
     """Entropy (nats) of the softmaxed top-10 distribution at `position`.
 
-    Softmax over only the top-10 logits (shifted by max for stability). We
+    Softmax over only the top-10 logprobs (shifted by max for stability). We
     don't have the full vocab, so this is an underestimate of true entropy
     but preserves the monotone ordering (peaked vs spread) we care about.
     """
-    top_tokens, top_logits = _load_logits(env, example_id)
-    _, logs = _position_slice(top_tokens, top_logits, position, example_id)
+    try:
+        top_tokens, top_logits = _load_logits(env, example_id)
+        _, logs = _position_slice(top_tokens, top_logits, position, example_id)
+    except BackendNotConfigured as exc:
+        if not _is_missing_precomputed_logits_error(exc):
+            raise
+        live_pairs = _get_topk_live(env, example_id, example, position)
+        logs = np.asarray([score for _, score in live_pairs], dtype=np.float64)
+
     logs = np.asarray(logs, dtype=np.float64)
     logs = logs - logs.max()
     probs = np.exp(logs)
@@ -135,6 +174,71 @@ def _get_sampling_client():
 def _split_for_agent(env: dict, split_of: dict[str, str]) -> str:
     """Map the agent's workspace type to the cot-proxy-tasks source split."""
     return split_of["few-shot" if env["AGENT_TYPE"] == "strategy" else "test"]
+
+
+def _get_topk_live(
+    env: dict, example_id: str, example: dict, position: int
+) -> list[tuple[str, float]]:
+    """Query the live model for the next-token top-K distribution at a CoT position.
+
+    This is a fallback for examples that do not have precomputed `.logits.npz`
+    sidecars, which is common in OOD human runs.
+    """
+    try:
+        import tinker
+    except ImportError as e:
+        raise BackendNotConfigured(
+            f"precomputed logprobs not found and tinker SDK not importable ({e}); "
+            "install with `uv pip install tinker`."
+        )
+
+    scaffold_root = Path(env["SCAFFOLD_ROOT"])
+    meta, source_root, split_of = load_task_meta(scaffold_root, env["AGENT_TASK"])
+
+    source_model = str(meta.get("model", "")).lower()
+    if not source_model.startswith("qwen"):
+        raise BackendNotConfigured(
+            f"live logprobs fallback is disabled for task {env['AGENT_TASK']!r} because "
+            f"its rollouts were generated by model {source_model!r}, which Tinker "
+            "does not serve. Only Qwen-family tasks are supported."
+        )
+
+    sampling_client, tokenizer = _get_sampling_client()
+    split = _split_for_agent(env, split_of)
+    prefix_ids, cot_ids = build_prompt_parts(
+        env["AGENT_TASK"], example, tokenizer, source_root, split
+    )
+
+    if position < 0 or position >= len(cot_ids):
+        raise BackendNotConfigured(
+            f"position {position} out of range for {example_id} "
+            f"(have {len(cot_ids)} CoT token positions)."
+        )
+
+    placeholder_id = 0
+    prompt_ids = list(prefix_ids) + list(cot_ids[:position]) + [placeholder_id]
+
+    future = sampling_client.sample(
+        prompt=tinker.ModelInput(
+            chunks=[tinker.EncodedTextChunk(tokens=prompt_ids)]
+        ),
+        num_samples=1,
+        sampling_params=tinker.SamplingParams(max_tokens=1, temperature=0.0),
+        include_prompt_logprobs=True,
+        topk_prompt_logprobs=10,
+    )
+    response = future.result()
+
+    topk = response.topk_prompt_logprobs
+    if not topk or topk[-1] is None:
+        raise BackendNotConfigured(
+            "Tinker response missing topk_prompt_logprobs at the requested slot; "
+            "the server may not support top-K logprobs for this base model."
+        )
+
+    decoded = [(tokenizer.decode([int(tid)]), float(lp)) for tid, lp in topk[-1]]
+    decoded.sort(key=lambda x: -x[1])
+    return decoded[:10]
 
 
 def force_and_next_top10(
