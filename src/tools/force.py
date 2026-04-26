@@ -26,11 +26,19 @@ in the environment.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 
 from _backend import BackendNotConfigured, force_and_next_top10
-from _common import fail, get_env, load_example, parse_int
+from _common import (
+    fail,
+    get_env,
+    load_example,
+    next_numbered_output_path,
+    parse_int,
+    write_csv,
+)
 
 
 MAX_FORCE_TOKENS = 10
@@ -74,10 +82,22 @@ def main(argv: list[str]) -> int:
         fail(str(e), code=3)
         return 3
 
+    out_path = next_numbered_output_path("force")
+    top10_json = json.dumps(
+        [{"rank": rank, "token": token, "logprob": lp} for rank, (token, lp) in enumerate(top10, start=1)],
+        ensure_ascii=False,
+    )
+    row = {
+        "example_id": example_id,
+        "token_position": position,
+        "forced_text": forced,
+        "next_token": next_token,
+        "next_token_logprob": float(top10[0][1]),
+        "top_10_logprobs_json": top10_json,
+    }
+    write_csv(out_path, list(row.keys()), [row])
     print(f"next_token: {next_token!r}")
-    print("top_10:")
-    for token, lp in top10:
-        print(f"  {token!r}\t{lp:.6f}")
+    print(f"details: {out_path.name}")
     return 0
 
 

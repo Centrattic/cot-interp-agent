@@ -10,11 +10,34 @@ Quick reference:
 ```bash
 ./scaffold.sh run <task_name>                    # legacy single-strategy run
 ./scaffold.sh run <task_name> --n-strategies 10  # 10-way cross-val partitioning
+./scaffold.sh run <task_name> --agent-backend codex
+python src/human_ui.py --task <task_name>        # human baseline web UI
 ./scaffold.sh status                             # list runs
 python src/ingest_cot_proxy.py --preset <task>   # populate data/<task>/
 ```
 
 See `CLAUDE.md` for the directory layout and tool-authoring conventions.
+
+## Human baseline UI
+
+`src/human_ui.py` launches a small local web app for running a human baseline
+against one task while preserving the scaffold's run layout:
+
+- creates a normal `agent-runs/<task>/run-<ts>/` directory
+- reuses `strategy/`, `Examples.csv`, `few-shot/`, and `STRATEGY.md`
+- materializes `test-000/`, `test-001/`, ... only after you click **Start Test**
+- runs the same research tools (`ask`, `top_10_logits`, `top10_entropy`, `force`)
+  inside the strategy/test folders, so their CSV outputs land in the same places
+- writes `answer.txt` per test example and snapshots every submission under
+  `submissions/submission-<ts>/`
+
+Example:
+
+```bash
+python src/human_ui.py --task reasoning_termination --tools ask,top_10_logits,top10_entropy,force
+```
+
+Then open the printed localhost URL in a browser.
 
 ## Multi-partition runs (`--n-strategies N`)
 
@@ -61,6 +84,7 @@ Relevant flags:
 | `--n-strategies N` | 1 | number of partitions (and parallel strategy agents) |
 | `--strategy-seed-base B` | 0 | partition `k` uses seed `B + k` for its few-shot sample |
 | `--few-shot-per-class K` | from metadata | override per-class few-shot size |
+| `--agent-backend {claude,codex}` | `claude` | choose which agent CLI the scaffold launches |
 | `--tools t1,t2,…` | `` | custom research tools enabled this run (see `scaffold.py:TOOL_DESCRIPTIONS`) |
 
 Env vars worth knowing:
@@ -68,3 +92,4 @@ Env vars worth knowing:
 - `AGENT_TEST_MAX_WORKERS` — cap on concurrent test agents *per partition*
   (default 10). With `N=10` partitions this means up to 100 test agents in
   flight, so bump down on rate-limit-constrained accounts.
+- `CODEX_BIN` / `CODEX_MODEL` / `CODEX_EXEC_CMD` — optional Codex backend overrides.

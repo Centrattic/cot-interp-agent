@@ -1,13 +1,14 @@
-"""Render a claude --output-format stream-json JSONL trace into a readable text log.
+"""Render agent stdout into a readable text log.
 
-Stream-json emits one JSON object per line representing a discrete event:
+Claude's stream-json format emits one JSON object per line representing a
+discrete event:
   - system init (session id, model, tools)
   - user messages (original prompt + tool-result replies)
   - assistant messages (text + tool_use blocks)
   - result (final summary with cost / turns / exit reason)
 
-Reading raw JSONL is painful; this module walks the stream and produces a
-tool-use-by-tool-use prose log that's easy to scan.
+When stdout is not valid JSONL (for example a different backend), this module
+still preserves it line-by-line in the rendered `.txt` trace.
 """
 from __future__ import annotations
 

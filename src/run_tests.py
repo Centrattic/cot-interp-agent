@@ -2,8 +2,8 @@
 """Parallel test runner.
 
 Reads test examples from data/<task>/test/, creates a folder per test example
-inside the current agent run's test/ directory, and launches a Claude Code
-instance for each one in parallel.
+inside the current agent run's test/ directory, and launches one configured
+agent CLI instance for each one in parallel.
 
 Called by the `test` bash command from within a strategy agent session.
 Expects environment variables: SCAFFOLD_ROOT, AGENT_RUN_DIR, AGENT_TASK, AGENT_RUN_ID
@@ -18,9 +18,11 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-# Allow importing from src/ (for tools.sae_encode)
+# Allow importing from src/ (for tools.sae_encode and agent_backend)
 _SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(_SCRIPT_DIR))
+
+from agent_backend import build_agent_launch_spec, get_agent_backend, supports_add_dirs
 
 
 def get_env():
@@ -49,24 +51,19 @@ def collect_test_examples(data_test_dir: Path, sae_source_dir: Path | None = Non
             data = json.load(f)
         example_id = json_file.stem
 
-        npy_path = None
-        for d in filter(None, (data_test_dir, sae_source_dir)):
-            candidate = d / f"{example_id}.npy"
-            if candidate.exists():
-                npy_path = candidate
-                break
-        sae_npz_path = None
-        for d in filter(None, (data_test_dir, sae_source_dir)):
-            candidate = d / f"{example_id}.sae.npz"
-            if candidate.exists():
-                sae_npz_path = candidate
-                break
+        def _find_sidecar(suffix: str) -> Path | None:
+            for d in filter(None, (data_test_dir, sae_source_dir)):
+                candidate = d / f"{example_id}{suffix}"
+                if candidate.exists():
+                    return candidate
+            return None
 
         examples.append({
             "id": example_id,
             "json_path": json_file,
-            "npy_path": npy_path,
-            "sae_npz_path": sae_npz_path,
+            "npy_path": _find_sidecar(".npy"),
+            "sae_npz_path": _find_sidecar(".sae.npz"),
+            "logits_path": _find_sidecar(".logits.npz"),
             "data": data,
         })
     return examples
@@ -116,6 +113,8 @@ def run_single_test(
         shutil.copy2(example["npy_path"], test_folder / "example.npy")
     if example.get("sae_npz_path"):
         shutil.copy2(example["sae_npz_path"], test_folder / "example.sae.npz")
+    if example.get("logits_path"):
+        shutil.copy2(example["logits_path"], test_folder / example["logits_path"].name)
 
     user_prompt = (
         f"You are classifying one test example (id={example['id']}).\n"
@@ -126,35 +125,41 @@ def run_single_test(
         f"exactly `yes` or `no`, no other text."
     )
 
-    # --allowed-tools and --add-dir are variadic in the claude CLI, so they
-    # greedily consume trailing positional args. Pass the user prompt via stdin.
-    # --output-format stream-json emits full turn-by-turn events; we write both
-    # the raw JSONL and a rendered .txt per test agent.
     system_prompt = prompt_path.read_text(encoding="utf-8")
-    cmd = [
-        "claude",
-        "--print",
-        "--dangerously-skip-permissions",
-        "--output-format", "stream-json",
-        "--verbose",  # required by --output-format stream-json
-        "--system-prompt", system_prompt,
-        "--add-dir", str(strategy_dir),
-        "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
-    ]
 
     env = os.environ.copy()
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "test"
     env["AGENT_EXAMPLE_ID"] = example["id"]
+    backend = get_agent_backend(env)
+
+    run_cwd = test_folder
+    if backend == "codex":
+        run_cwd = run_dir
+        user_prompt = (
+            f"You are classifying one test example (id={example['id']}).\n"
+            f"The example is in `test-{test_index:03d}/example.json` "
+            f"(ground-truth label has been removed).\n"
+            f"Read `strategy/STRATEGY.md` (and any referenced files) from the run root, "
+            f"apply the strategy to this example, and write your answer to "
+            f"`test-{test_index:03d}/answer.txt` — exactly `yes` or `no`, no other text."
+        )
+
+    launch = build_agent_launch_spec(
+        backend=backend,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        add_dirs=[strategy_dir, trace_dir] if supports_add_dirs(backend) else None,
+    )
 
     trace_base = trace_dir / f"test-{test_index:03d}-trace"
 
     try:
         result = subprocess.run(
-            cmd,
-            cwd=str(test_folder),
+            launch.cmd,
+            cwd=str(run_cwd),
             env=env,
-            input=user_prompt,
+            input=launch.stdin_text,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -192,7 +197,8 @@ def main():
     task_name = env["AGENT_TASK"]
     run_id = env["AGENT_RUN_ID"]
 
-    data_test_dir = scaffold_root / "data" / task_name / "test"
+    data_task = os.environ.get("AGENT_DATA_TASK", task_name)
+    data_test_dir = scaffold_root / "data" / data_task / "test"
     strategy_dir = run_dir / "strategy"
     trace_dir = scaffold_root / "agent-traces" / task_name / f"run-{run_id}"
     prompt_path = scaffold_root / "prompts" / "test-agent.md"
@@ -262,7 +268,9 @@ def main():
     trace_dir.mkdir(parents=True, exist_ok=True)
     results = []
 
-    max_workers = min(len(examples), int(os.environ.get("AGENT_TEST_MAX_WORKERS", "10")))
+    agent_backend = os.environ.get("AGENT_BACKEND", "").strip().lower()
+    default_max_workers = "2" if agent_backend == "codex" else "10"
+    max_workers = min(len(examples), int(os.environ.get("AGENT_TEST_MAX_WORKERS", default_max_workers)))
     # ThreadPoolExecutor (not ProcessPoolExecutor): work is I/O-bound (subprocess.run),
     # threads are simpler, avoid pickling, and don't leak grandchild pipe handles across
     # worker processes (which previously deadlocked shutdown on Windows).
@@ -307,6 +315,8 @@ def main():
     if answered:
         print(f"Accuracy: {correct}/{len(answered)} = {correct/len(answered):.1%}")
     print(f"Details saved to {results_path}")
+    if missing:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

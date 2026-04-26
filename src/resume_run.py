@@ -20,6 +20,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from agent_backend import build_agent_launch_spec, get_agent_backend, prepare_codex_home
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -48,10 +50,18 @@ def has_results(part_dir: Path) -> bool:
     return (part_dir / "results.csv").exists()
 
 
+def ensure_codex_home(part_dir: Path, env: dict[str, str]) -> None:
+    if get_agent_backend(env) != "codex":
+        return
+    target = Path(env.get("CODEX_HOME", "")).expanduser() if env.get("CODEX_HOME") else part_dir / ".codex-home"
+    env["CODEX_HOME"] = str(prepare_codex_home(target, os.environ))
+
+
 def run_strategy_agent(part_dir: Path) -> int:
     bashrc = part_dir / "agent.bashrc"
     env = os.environ.copy()
     env.update(parse_bashrc(bashrc))
+    ensure_codex_home(part_dir, env)
     env["BASH_ENV"] = str(bashrc)
     env["AGENT_TYPE"] = "strategy"
 
@@ -59,19 +69,21 @@ def run_strategy_agent(part_dir: Path) -> int:
     user_prompt = (
         "Read README.md in the current directory for the task brief, available tools, "
         "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
-        "and run `test` when ready."
+        "and run `run-tests` when ready."
     )
-    cmd = [
-        "claude", "--print", "--dangerously-skip-permissions",
-        "--output-format", "stream-json", "--verbose",
-        "--system-prompt", prompt_path.read_text(encoding="utf-8"),
-        "--allowed-tools", "Read,Write,Edit,Bash,Glob,Grep",
-    ]
+    system_prompt = prompt_path.read_text(encoding="utf-8")
+    backend = get_agent_backend(env)
+    launch = build_agent_launch_spec(
+        backend=backend,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        add_dirs=[part_dir, ROOT / "agent-traces" / env["AGENT_TASK"] / f"run-{env['AGENT_RUN_ID']}"] if backend == "codex" else None,
+    )
     strategy_dir = part_dir / "strategy"
     tag = f"{part_dir.parent.name}/{part_dir.name}"
-    print(f"[{tag}] STRATEGY agent launching", flush=True)
+    print(f"[{tag}] STRATEGY agent launching (backend={backend})", flush=True)
     p = subprocess.run(
-        cmd, env=env, cwd=str(strategy_dir), input=user_prompt,
+        launch.cmd, env=env, cwd=str(strategy_dir), input=launch.stdin_text,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
     # Persist strategy trace
@@ -91,6 +103,7 @@ def run_test_phase(part_dir: Path, max_workers: int) -> int:
     bashrc = part_dir / "agent.bashrc"
     env = os.environ.copy()
     env.update(parse_bashrc(bashrc))
+    ensure_codex_home(part_dir, env)
     env["BASH_ENV"] = str(bashrc)
     env["AGENT_TEST_MAX_WORKERS"] = str(max_workers)
     cmd = [sys.executable, str(ROOT / "src" / "run_tests.py")]
