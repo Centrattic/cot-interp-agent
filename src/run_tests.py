@@ -69,6 +69,24 @@ def collect_test_examples(data_test_dir: Path, sae_source_dir: Path | None = Non
     return examples
 
 
+def _load_answer_quick(p: Path):
+    """Parse an answer.txt. Returns 1, 0, or None.
+
+    Returns None if the file doesn't exist yet, or contains anything other
+    than exactly ``yes`` / ``no`` (case-insensitive, whitespace stripped).
+    Used to decide whether a test agent is done and can be shut down early.
+    """
+    if not p.exists():
+        return None
+    try:
+        a = p.read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return None
+    if a == "yes": return 1
+    if a == "no":  return 0
+    return None
+
+
 def run_single_test(
     test_index: int,
     example: dict,
@@ -126,8 +144,14 @@ def run_single_test(
     )
 
     system_prompt = prompt_path.read_text(encoding="utf-8")
+    project_settings = Path(os.environ["SCAFFOLD_ROOT"]) / ".claude" / "settings.json"
 
     env = os.environ.copy()
+    # Inject bashrc exports directly — zsh (default on macOS) ignores BASH_ENV,
+    # so without this the test agent's shell would be missing AGENT_RUN_DIR,
+    # PATH=bin/:... , and the per-partition AGENT_N_PARTITIONS / AGENT_PARTITION_INDEX.
+    from scaffold import _parse_bashrc_exports
+    env.update(_parse_bashrc_exports(bashrc_path, env))
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "test"
     env["AGENT_EXAMPLE_ID"] = example["id"]
@@ -150,33 +174,73 @@ def run_single_test(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         add_dirs=[strategy_dir, trace_dir] if supports_add_dirs(backend) else None,
+        project_settings=project_settings if backend == "claude" else None,
     )
 
     trace_base = trace_dir / f"test-{test_index:03d}-trace"
 
+    # Auto-shutdown: the test agent's only job is to write a valid yes/no to
+    # answer.txt. Once that file has a clean answer we terminate the agent
+    # subprocess immediately instead of waiting for it to exit on its own;
+    # otherwise the agent commonly spends another 30-60s reflecting /
+    # exploring after writing answer.txt, which is wasted wall time and
+    # tokens.
+    import threading as _threading
+    import time as _time
+
+    answer_path = test_folder / "answer.txt"
+    timeout_sec = int(os.environ.get("AGENT_TEST_TIMEOUT_SEC", "600"))
+    grace_after_answer = int(os.environ.get("AGENT_TEST_GRACE_SEC", "3"))
+
+    p = subprocess.Popen(
+        launch.cmd, cwd=str(run_cwd), env=env,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8",
+    )
+    if launch.stdin_text is not None:
+        p.stdin.write(launch.stdin_text)
+    p.stdin.close()
+
+    out_chunks: list[str] = []
+    def _drain():
+        assert p.stdout is not None
+        for line in iter(p.stdout.readline, ""):
+            out_chunks.append(line)
+    drainer = _threading.Thread(target=_drain, daemon=True)
+    drainer.start()
+
+    start = _time.time()
+    kill_reason = None
+    while True:
+        if p.poll() is not None:
+            break
+        if _time.time() - start > timeout_sec:
+            p.terminate()
+            kill_reason = "timeout"
+            break
+        if _load_answer_quick(answer_path) is not None:
+            # Give the agent a short grace period to let final stream chunks flush
+            _time.sleep(grace_after_answer)
+            if p.poll() is None:
+                p.terminate()
+                kill_reason = "answer-written"
+            break
+        _time.sleep(1)
     try:
-        result = subprocess.run(
-            launch.cmd,
-            cwd=str(run_cwd),
-            env=env,
-            input=launch.stdin_text,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            timeout=int(os.environ.get("AGENT_TEST_TIMEOUT_SEC", "600")),
-        )
-        stdout = result.stdout
-        exit_code = result.returncode
-    except subprocess.TimeoutExpired as e:
-        stdout = (e.stdout or "") + f"\n\n[subprocess timed out after {e.timeout}s]"
-        exit_code = -1
+        p.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        p.wait()
+    drainer.join(timeout=2)
+    exit_code = p.returncode if p.returncode is not None else -1
+    stdout = "".join(out_chunks)
+    if kill_reason == "timeout":
+        stdout += f"\n\n[subprocess timed out after {timeout_sec}s]"
 
     from render_trace import write_trace_pair
     write_trace_pair(stdout, trace_base)
 
     # Read answer
-    answer_path = test_folder / "answer.txt"
     answer = None
     if answer_path.exists():
         answer = answer_path.read_text().strip().lower()

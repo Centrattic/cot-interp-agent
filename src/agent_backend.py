@@ -59,7 +59,11 @@ def prepare_codex_home(target_dir: Path, env: dict[str, str] | None = None) -> P
     return target_dir
 
 
-def _build_claude_command(system_prompt: str, add_dirs: list[Path] | None) -> list[str]:
+def _build_claude_command(
+    system_prompt: str,
+    add_dirs: list[Path] | None,
+    project_settings: Path | None = None,
+) -> list[str]:
     cmd = [
         os.environ.get("CLAUDE_BIN", "claude"),
         "--print",
@@ -72,6 +76,11 @@ def _build_claude_command(system_prompt: str, add_dirs: list[Path] | None) -> li
         "--allowed-tools",
         "Read,Write,Edit,Bash,Glob,Grep",
     ]
+    # Claude Code doesn't walk up the cwd tree to find .claude/settings.json,
+    # so when the agent runs from a deep run/test subdirectory the project's
+    # peek-block hooks would be missed. Pass --settings explicitly.
+    if project_settings is not None:
+        cmd.extend(["--settings", str(project_settings)])
     for extra_dir in add_dirs or []:
         cmd.extend(["--add-dir", str(extra_dir)])
     return cmd
@@ -110,10 +119,11 @@ def build_agent_launch_spec(
     system_prompt: str,
     user_prompt: str,
     add_dirs: list[Path] | None = None,
+    project_settings: Path | None = None,
 ) -> AgentLaunchSpec:
     if backend == "claude":
         return AgentLaunchSpec(
-            cmd=_build_claude_command(system_prompt, add_dirs),
+            cmd=_build_claude_command(system_prompt, add_dirs, project_settings),
             stdin_text=user_prompt,
         )
     if backend == "codex":

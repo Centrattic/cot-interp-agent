@@ -27,7 +27,7 @@ def fail(msg: str, code: int = 2) -> None:
 
 def get_env() -> dict:
     """Pull required env vars set by the scaffold launcher."""
-    required = ["SCAFFOLD_ROOT", "AGENT_TASK", "AGENT_TYPE"]
+    required = ["SCAFFOLD_ROOT", "AGENT_TASK", "AGENT_TYPE", "AGENT_RUN_DIR"]
     out = {}
     for key in required:
         val = os.environ.get(key)
@@ -47,10 +47,13 @@ def example_dir(env: dict) -> Path:
     """Return the example directory this agent may query.
 
     Prefer the agent workspace copy when present:
-    - strategy: `<cwd>/few-shot/` or `<AGENT_RUN_DIR>/strategy/few-shot/`
-    - test: current test folder if it contains `example.json`
+    - strategy: ``<cwd>/few-shot/`` or ``$AGENT_RUN_DIR/strategy/few-shot/``
+      (populated fresh by scaffold.py for every partition in multi-partition mode).
+    - test: current test folder if it contains ``example.json``.
 
-    Fall back to `data/<task>/{few-shot,test}` for legacy runs.
+    Falls back to ``data/<task>/{few-shot,test}`` for legacy runs. Test agents
+    are still restricted to their own ``AGENT_EXAMPLE_ID`` by downstream scope
+    checks in individual tools.
     """
     cwd = Path.cwd()
     if env["AGENT_TYPE"] == "strategy":
@@ -66,13 +69,26 @@ def example_dir(env: dict) -> Path:
         if (cwd / "example.json").exists():
             return cwd
 
+
     scaffold_root = Path(env["SCAFFOLD_ROOT"])
     task = env["AGENT_TASK"]
-    subdir = "few-shot" if env["AGENT_TYPE"] == "strategy" else "test"
-    path = scaffold_root / "data" / task / subdir
+    if env["AGENT_TYPE"] == "strategy":
+        path = Path(env["AGENT_RUN_DIR"]) / "strategy" / "few-shot"
+    else:
+        path = scaffold_root / "data" / task / "test"
     if not path.exists():
         fail(f"example directory not found: {path}")
     return path
+
+
+def list_few_shot_ids(env: dict) -> list[str]:
+    """Return sorted example-ids (filename stems) from the strategy agent's
+    current few-shot directory. Strategy-only helper — errors the same way
+    ``example_dir`` does if the dir is missing."""
+    if env["AGENT_TYPE"] != "strategy":
+        fail("list_few_shot_ids() is only valid for strategy agents.")
+    base = example_dir(env)
+    return sorted(p.stem for p in base.glob("*.json"))
 
 
 def load_example(env: dict, example_id: str) -> dict:

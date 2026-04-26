@@ -281,6 +281,74 @@ of the CoT (before any continuation)".
 - Writes `force_<n>.csv` in the current directory with columns
   `example_id,token_position,forced_text,next_token,next_token_logprob,top_10_logprobs_json`.
 """.strip(),
+    "hedging-detector": """### `hedging-detector <example_id>`
+
+Score each sentence of the example's CoT prefix for **epistemic hedging**
+via a fresh **claude-opus-4-7** subagent (extended thinking on). Scores are
+in `[0, 1]`: `0.0` = committed / assertive, `1.0` = heavily hedged /
+self-doubting. A 5-point centered moving average gives a hedging trajectory
+across the CoT.
+
+**Scope**
+- **Strategy agent:** any few-shot `<example_id>`.
+- **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
+
+**Rate limit**
+- **Once per sample.** A second call with the same `<example_id>` returns
+  the cached `hedging_<example_id>.json` (printed as `status: cache-hit`).
+
+**Output contract.** Prints a `status:` line plus summary stats and writes
+`hedging_<example_id>.json` in the current directory. The JSON contains
+per-sentence scores + rationales, the smoothed trajectory, overall mean,
+and the index of the most-hedged sentence.
+""".strip(),
+    "hedging-detector-all": """### `hedging-detector-all`
+
+Run `hedging-detector` **in parallel** over every few-shot example (≤8
+concurrent claude-opus-4-7 calls). Writes per-example `hedging_<id>.json`
+files (cache hits honored) plus a `hedging_all_summary.json` with per-label
+mean/stdev/min/max of the overall hedging score.
+
+**Scope**
+- **Strategy agent only.** Invoking from a test agent fails.
+
+**Rate limit**
+- **Once per strategy run.** On success a lock is written to
+  `.subagent_locks/hedging_detector_all.lock`; subsequent invocations refuse.
+""".strip(),
+    "repetition-mapper": """### `repetition-mapper <example_id>`
+
+Cluster sentences that **restate or re-derive the same claim** in the
+example's CoT, via a fresh **claude-opus-4-7** subagent (extended thinking
+on). Returns clusters (each with a label, the sentence indices it spans,
+and a restatement count) plus the "longest chain" — the cluster whose
+restatements are spread furthest apart in the CoT. Singleton clusters are
+excluded.
+
+**Scope**
+- **Strategy agent:** any few-shot `<example_id>`.
+- **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
+
+**Rate limit**
+- **Once per sample.** A second call with the same `<example_id>` returns
+  the cached `repetition_<example_id>.json`.
+
+**Output contract.** Prints a `status:` line plus summary stats and writes
+`repetition_<example_id>.json` in the current directory.
+""".strip(),
+    "repetition-mapper-all": """### `repetition-mapper-all`
+
+Run `repetition-mapper` **in parallel** over every few-shot example (≤8
+concurrent claude-opus-4-7 calls). Writes per-example `repetition_<id>.json`
+files (cache hits honored) plus a `repetition_all_summary.json` with
+per-label stats on cluster count and longest-chain span.
+
+**Scope**
+- **Strategy agent only.**
+
+**Rate limit**
+- **Once per strategy run.** Lock: `.subagent_locks/repetition_mapper_all.lock`.
+""".strip(),
     "sae": """### `sae` — SAE feature inspection
 
 Three subcommands for exploring a labelled **BatchTopK SAE (width 65,536,
@@ -294,6 +362,12 @@ Full-text search over feature labels. `<query>` is any keywords (e.g.
 features whose labels contain the most query words, ranked by overlap.
 Writes `sae_search_<query_slug>.csv` (columns: `feature_id, score, label`)
 in the current directory and prints the top matches to stdout.
+**Search results are stable across paraphrases** — running the same
+concept with different synonyms ("conclusion final answer" →
+"concluding summary complete" → "wrap up finalize") rarely surfaces
+new features. Use the strongest concept word once, look at the top
+10–20 results, then move on. Better yield from `top-features` on a
+specific few-shot example with the property you care about.
 
 #### `sae top-features <example_id> [--n N]`
 Top `N` SAE features active on `<example_id>`, sorted by max activation
@@ -312,17 +386,82 @@ Use this to check whether a feature discriminates label=yes vs label=no.
 - **Strategy agent:** may call all three subcommands on any few-shot `<example_id>`.
 - **Test agent:** `top-features` only on its own `AGENT_EXAMPLE_ID`; `search` and `feature` unrestricted but rarely useful.
 
-**Typical loop**
-1. `sae top-features <some_few_shot_id>` on a yes-labeled and no-labeled
-   example — scan the English labels to form hypotheses.
-2. `sae search "<keywords from a hypothesis>"` to find other features on
-   the same theme.
-3. `sae feature <fid>` to confirm a candidate feature actually separates
-   positives from negatives across the full few-shot set.
-
 **Output format.** All three write a CSV in the current directory and
 print a human-readable summary. CSVs overwrite on repeat (filename is
 keyed by query / fid / example id, not auto-incremented).
+""".strip(),
+    "few-shot-diff": """### `few-shot-diff`
+
+Ask a fresh **claude-opus-4-7** subagent (extended thinking on) to identify
+**ranked distinguishing features** between two blind-labelled groups of
+your few-shot examples. The few-shot set is split by ground-truth label into
+"Group 1" and "Group 2"; the subagent is given neither the task description
+nor the label meanings, and is told to characterise the groups empirically.
+The goal is to surface signals you might have missed or overweighted because
+you had the label in front of you.
+
+**Scope**
+- **Strategy agent only.**
+
+**Rate limit**
+- **Once per strategy run.** Lock: `.subagent_locks/few_shot_diff.lock`.
+
+**Output contract.** Writes `few_shot_diff.json` containing a ranked list of
+features (description, confidence in `[0, 1]`, per-group example-id evidence)
+plus a one-paragraph summary, and prints the group → label mapping so you
+can interpret the result.
+""".strip(),
+    "word-stats": """### `word-stats` — text statistics over the few-shot
+
+Four subcommands for surfacing surface-level lexical signals
+(complementary to the SAE tool, which surfaces learned features).
+Tokenisation is lowercase, whitespace-split (`\\b\\w+\\b`); n-grams cover
+unigrams through trigrams. Statistical scoring uses **Monroe et al. 2008
+log-odds with informative Dirichlet prior** built from the combined
+yes+no few-shot corpus — robust to stopwords and rare-term flukes.
+
+#### `word-stats count <sample_id> <w1> [<w2> …]`
+Count one or more terms in a specific example. Whole-word match for
+single tokens, substring (non-overlapping, left-to-right) for multi-word
+phrases. Useful for sanity-checking specific candidate signals.
+Writes `word_stats_count_<sample_id>.csv`.
+- Strategy agent: any few-shot `<sample_id>`.
+- Test agent: only its assigned `AGENT_EXAMPLE_ID`.
+
+#### `word-stats tf-idf`
+Find the n-grams that most distinguish yes-labelled from no-labelled
+examples in the few-shot. Returns top 20 yes-distinctive and top 20
+no-distinctive terms, each with the log-odds z-score, raw counts in
+each class, and the **number of distinct examples** in which the term
+appears (so you can tell signal from a single-example fluke). Writes
+`word_stats_tfidf_yes.csv` and `word_stats_tfidf_no.csv`.
+- **Strategy agent only.**
+
+#### `word-stats compare <sample_id>`
+For a specific example, show which n-grams *in that example* are most
+distinctive (positive or negative) relative to the few-shot's opposite
+class. Top 20 by absolute z-score, signed. Useful at test time when you
+want to know which terms in the test example actually carry signal,
+rather than guessing which to count. Writes
+`word_stats_compare_<sample_id>.csv`.
+- Strategy agent: any few-shot `<sample_id>`.
+- Test agent: only its assigned `AGENT_EXAMPLE_ID`.
+
+#### `word-stats rank <concept> [--words "w1,w2,…"]`
+Rank all few-shot examples by how often a concept appears. By default,
+expands `<concept>` into 15-30 keywords/phrases via a fresh **claude-sonnet-4-6**
+call (cached locally per concept), then matches each keyword against
+each example. Returns: the keyword list at the top of the output (so
+you can audit it), then a ranked table with per-example total hit count
++ per-keyword breakdown + true label. Pass `--words "w1,w2,…"` to skip
+the LLM expansion and use an exact comma-separated list.
+Writes `word_stats_rank_<concept_slug>.csv`.
+- **Strategy agent only.**
+
+**Tuning knobs (env vars)**
+- `WORD_STATS_ALPHA0`: total prior strength for the Dirichlet prior
+  (default 100; smaller = data dominates more, larger = stronger
+  smoothing of rare terms).
 """.strip(),
 }
 
@@ -405,6 +544,39 @@ def _write_bashrc(
     bashrc_path.write_text("\n".join(lines) + "\n")
 
 
+def _parse_bashrc_exports(bashrc_path: Path, base_env: dict) -> dict:
+    """Return the ``export KEY="VAL"`` vars from ``bashrc_path`` as a dict.
+
+    Needed because Claude Code's Bash tool runs in zsh on macOS, which does
+    not honor ``BASH_ENV`` — so the per-partition ``agent.bashrc`` we write
+    never reaches the strategy/test agent's shell. By parsing those exports
+    in Python and merging them into the subprocess env, we make the agent
+    see ``AGENT_N_PARTITIONS``, ``AGENT_PARTITION_INDEX``, ``PATH=bin/:…``
+    etc. regardless of which shell Claude Code picks.
+
+    ``$VAR`` references are expanded against ``base_env`` plus the
+    already-parsed exports, which matches what bash would do on source.
+    """
+    import re as _re
+    exports: dict[str, str] = {}
+    text = bashrc_path.read_text(encoding="utf-8")
+    export_re = _re.compile(r'^\s*export\s+(\w+)=(.*?)\s*$')
+    varref_re = _re.compile(r'\$(\w+)|\$\{(\w+)\}')
+    for line in text.splitlines():
+        m = export_re.match(line)
+        if not m:
+            continue
+        key, raw = m.group(1), m.group(2)
+        if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in ('"', "'"):
+            raw = raw[1:-1]
+        def _sub(match):
+            var = match.group(1) or match.group(2)
+            return exports.get(var, base_env.get(var, ""))
+        resolved = varref_re.sub(_sub, raw)
+        exports[key] = resolved
+    return exports
+
+
 def _launch_strategy_agent(
     strategy_dir: Path,
     trace_base: Path,
@@ -413,6 +585,13 @@ def _launch_strategy_agent(
 ) -> int:
     """Run one strategy-agent subprocess in strategy_dir. Writes
     trace_base.jsonl / .txt. Returns exit code.
+
+    Safety nets on top of the claude subprocess:
+      - Wall-clock timeout (``AGENT_STRATEGY_TIMEOUT_SEC``, default 2700s / 45
+        min) — kills the agent if it hangs (e.g., stuck in a bad Bash call).
+      - Fallback invocation of ``run-tests``: if the agent exited having
+        written a non-empty STRATEGY.md but never created any ``test-*/``
+        folders, run the test phase here so the partition is still scored.
     """
     strategy_prompt_path = PROMPTS_DIR / "strategy-agent.md"
     if not strategy_prompt_path.exists():
@@ -425,8 +604,10 @@ def _launch_strategy_agent(
         "and run `run-tests` when ready."
     )
     system_prompt = strategy_prompt_path.read_text(encoding="utf-8")
+    project_settings = ROOT / ".claude" / "settings.json"
     env = os.environ.copy()
-    env["BASH_ENV"] = str(bashrc_path)
+    env.update(_parse_bashrc_exports(bashrc_path, env))  # inject for zsh
+    env["BASH_ENV"] = str(bashrc_path)                    # and keep for bash
     env["AGENT_TYPE"] = "strategy"
     backend = get_agent_backend(env)
     launch = build_agent_launch_spec(
@@ -434,24 +615,107 @@ def _launch_strategy_agent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         add_dirs=[strategy_dir.parent, trace_base.parent] if supports_add_dirs(backend) else None,
+        project_settings=project_settings if backend == "claude" else None,
     )
 
     tag = f" [{label}]" if label else ""
     print(f"Launching strategy agent{tag} with backend={backend}...")
-    result = subprocess.run(
-        launch.cmd,
-        cwd=str(strategy_dir),
-        env=env,
-        input=launch.stdin_text,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
+    timeout_sec = int(os.environ.get("AGENT_STRATEGY_TIMEOUT_SEC", "2700"))
+    posttest_grace = int(os.environ.get("AGENT_STRATEGY_POSTTEST_GRACE_SEC", "30"))
+
+    # Auto-shutdown: poll for completion of run-tests (signaled by
+    # results.csv being written into the partition root) and SIGTERM the
+    # strategy agent ~30s after it lands. Otherwise agents commonly spend
+    # several minutes after `run-tests` returns reading test-NNN/answer.txt,
+    # results.csv, src/run_tests.py, etc. — wasted tokens and wall time.
+    import threading as _threading
+    import time as _time
+
+    strategy_md = strategy_dir / "STRATEGY.md"
+    results_csv = strategy_dir.parent / "results.csv"
+
+    p = subprocess.Popen(
+        launch.cmd, cwd=str(strategy_dir), env=env,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8",
     )
+    if launch.stdin_text is not None:
+        p.stdin.write(launch.stdin_text)
+    p.stdin.close()
+
+    out_chunks: list[str] = []
+    def _drain():
+        assert p.stdout is not None
+        for line in iter(p.stdout.readline, ""):
+            out_chunks.append(line)
+    drainer = _threading.Thread(target=_drain, daemon=True)
+    drainer.start()
+
+    start = _time.time()
+    results_seen_at: float | None = None
+    kill_reason: str | None = None
+    while True:
+        if p.poll() is not None:
+            break
+        if _time.time() - start > timeout_sec:
+            p.terminate()
+            kill_reason = "timeout"
+            print(f"Strategy agent{tag}: TIMED OUT after {timeout_sec}s")
+            break
+        if (
+            strategy_md.exists()
+            and strategy_md.stat().st_size > 100
+            and results_csv.exists()
+        ):
+            if results_seen_at is None:
+                results_seen_at = _time.time()
+            elif _time.time() - results_seen_at >= posttest_grace:
+                p.terminate()
+                kill_reason = "post-test-grace-elapsed"
+                break
+        _time.sleep(2)
+    try:
+        p.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        p.wait()
+    drainer.join(timeout=2)
+    exit_code = p.returncode if p.returncode is not None else -1
+    stdout = "".join(out_chunks)
+    if kill_reason == "timeout":
+        stdout += f"\n\n[strategy agent timed out after {timeout_sec}s]"
+    elif kill_reason == "post-test-grace-elapsed":
+        stdout += f"\n\n[strategy agent shut down {posttest_grace}s after results.csv landed]"
+
     from render_trace import write_trace_pair
-    write_trace_pair(result.stdout, trace_base)
-    print(f"Strategy agent{tag} finished (exit code {result.returncode})")
-    return result.returncode
+    write_trace_pair(stdout, trace_base)
+
+    # Fallback: agent wrote STRATEGY.md but never called `test`. Invoke
+    # run-tests ourselves so the partition is still evaluated.
+    strategy_md = strategy_dir / "STRATEGY.md"
+    has_content = strategy_md.exists() and strategy_md.stat().st_size > 100
+    part_dir = strategy_dir.parent
+    already_tested = any(part_dir.glob("test-*"))
+    if has_content and not already_tested:
+        print(f"Strategy agent{tag}: STRATEGY.md written but `test` not called; "
+              f"running fallback run-tests...")
+        fallback_timeout = int(os.environ.get("AGENT_FALLBACK_TESTS_TIMEOUT_SEC", "1800"))
+        fallback_env = os.environ.copy()
+        fallback_env.update(_parse_bashrc_exports(bashrc_path, fallback_env))
+        try:
+            subprocess.run(
+                [str(BIN_DIR / "run-tests")],
+                cwd=str(strategy_dir),
+                env=fallback_env,
+                timeout=fallback_timeout,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"Strategy agent{tag}: fallback run-tests TIMED OUT after {fallback_timeout}s")
+        except Exception as e:
+            print(f"Strategy agent{tag}: fallback run-tests FAILED: {e}")
+
+    print(f"Strategy agent{tag} finished (exit code {exit_code})")
+    return exit_code
 
 
 def create_run(
