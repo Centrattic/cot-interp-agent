@@ -18,12 +18,12 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-# Allow importing from src/ (for tools.sae_encode and agent_backend)
-_SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(_SCRIPT_DIR))
-
-from agent_backend import build_agent_launch_spec, get_agent_backend, supports_add_dirs
-
+from agent_backend import (
+    build_agent_launch_spec,
+    get_agent_backend,
+    load_bash_exports,
+    supports_add_dirs,
+)
 
 def get_env():
     """Read required environment variables set by agent.bashrc."""
@@ -102,6 +102,7 @@ def run_single_test(
     # Per-test folder sits directly under run_dir, sibling to strategy/
     test_folder = run_dir / f"test-{test_index:03d}"
     test_folder.mkdir(parents=True, exist_ok=True)
+    local_strategy_dir = test_folder / "strategy"
 
     # Resume support: short-circuit if this test already has a valid answer.
     existing_answer = test_folder / "answer.txt"
@@ -134,40 +135,33 @@ def run_single_test(
     if example.get("logits_path"):
         shutil.copy2(example["logits_path"], test_folder / example["logits_path"].name)
 
+    # Materialize a local strategy/ view inside the test folder so the agent
+    # never needs to traverse to sibling directories.
+    if not local_strategy_dir.exists():
+        try:
+            local_strategy_dir.symlink_to(strategy_dir, target_is_directory=True)
+        except OSError:
+            shutil.copytree(strategy_dir, local_strategy_dir)
+
     user_prompt = (
         f"You are classifying one test example (id={example['id']}).\n"
         f"The example is in `example.json` in your current directory "
         f"(ground-truth label has been removed).\n"
-        f"Read STRATEGY.md (and any referenced files) from the strategy/ directory, "
+        f"Read `strategy/STRATEGY.md` (and any referenced files) from the local "
+        f"`strategy/` directory, "
         f"apply the strategy to this example, and write your answer to `answer.txt` — "
         f"exactly `yes` or `no`, no other text."
     )
 
     system_prompt = prompt_path.read_text(encoding="utf-8")
     project_settings = Path(os.environ["SCAFFOLD_ROOT"]) / ".claude" / "settings.json"
-
-    env = os.environ.copy()
-    # Inject bashrc exports directly — zsh (default on macOS) ignores BASH_ENV,
-    # so without this the test agent's shell would be missing AGENT_RUN_DIR,
-    # PATH=bin/:... , and the per-partition AGENT_N_PARTITIONS / AGENT_PARTITION_INDEX.
-    from scaffold import _parse_bashrc_exports
-    env.update(_parse_bashrc_exports(bashrc_path, env))
+    env = load_bash_exports(bashrc_path, os.environ.copy())
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "test"
     env["AGENT_EXAMPLE_ID"] = example["id"]
     backend = get_agent_backend(env)
 
     run_cwd = test_folder
-    if backend == "codex":
-        run_cwd = run_dir
-        user_prompt = (
-            f"You are classifying one test example (id={example['id']}).\n"
-            f"The example is in `test-{test_index:03d}/example.json` "
-            f"(ground-truth label has been removed).\n"
-            f"Read `strategy/STRATEGY.md` (and any referenced files) from the run root, "
-            f"apply the strategy to this example, and write your answer to "
-            f"`test-{test_index:03d}/answer.txt` — exactly `yes` or `no`, no other text."
-        )
 
     launch = build_agent_launch_spec(
         backend=backend,

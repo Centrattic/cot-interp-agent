@@ -58,12 +58,25 @@ def prepare_codex_home(target_dir: Path, env: dict[str, str] | None = None) -> P
             shutil.copy2(src, target_dir / name)
     return target_dir
 
+def load_bash_exports(path: Path, base_env: dict[str, str] | None = None) -> dict[str, str]:
+    """Parse simple `export KEY="VALUE"` lines from an agent bashrc into env."""
+    env = dict(base_env or os.environ)
+    if not path.exists():
+        return env
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line.startswith("export "):
+            continue
+        kv = line[len("export "):]
+        if "=" not in kv:
+            continue
+        key, _, value = kv.partition("=")
+        env[key.strip()] = value.strip().strip('"').strip("'")
+    if "PATH" in env and "$PATH" in env["PATH"]:
+        env["PATH"] = env["PATH"].replace("$PATH", os.environ.get("PATH", ""))
+    return env
 
-def _build_claude_command(
-    system_prompt: str,
-    add_dirs: list[Path] | None,
-    project_settings: Path | None = None,
-) -> list[str]:
+def _build_claude_command(system_prompt: str, add_dirs: list[Path] | None) -> list[str]:
     cmd = [
         os.environ.get("CLAUDE_BIN", "claude"),
         "--print",

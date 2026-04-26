@@ -1,16 +1,17 @@
 """`ask` tool — ask a short follow-up question about an example via OpenRouter.
 
 Usage:
-    ask <example_id> "<question>"
+    ask <example_id> "<question>" [--times N]
 
 Limits (enforced with the Qwen tokenizer):
-    - Question must be ≤20 tokens
-    - Response is truncated to the first 5 tokens (thinking/reasoning excluded)
+    - Question must be ≤30 tokens
+    - Response is truncated to the first 20 tokens (thinking/reasoning excluded)
 
 Behavior:
     - Strategy agent can query any few-shot example.
     - Test agent can only query its own assigned example (AGENT_EXAMPLE_ID).
-    - On success, writes ask_<n>.json into the current directory (the
+    - By default, asks the same question 5 times and reports every answer.
+    - On success, writes ask_<n>.csv into the current directory (the
       strategy/ or test/<n>/ folder) and prints a status summary.
     - On failure, prints a status line with the reason; no file written.
 """
@@ -22,16 +23,57 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from argparse import ArgumentParser
 
 from _common import fail, get_env, load_example, next_numbered_output_path, write_csv
 
 
-MAX_QUESTION_TOKENS = 20
-MAX_RESPONSE_TOKENS = 5
+MAX_QUESTION_TOKENS = 30
+MAX_RESPONSE_TOKENS = 20
+DEFAULT_NUM_SAMPLES = 5
 
 DEFAULT_TOKENIZER = "Qwen/Qwen3-32B"
 DEFAULT_MODEL = "qwen/qwen3-32b"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def get_readme_description() -> str:
+    """Return the agent-facing README blurb for this tool."""
+    return f"""### `ask <example_id> "<question>" [--times N]`
+
+Ask a follow-up question about an example via an oracle model
+(OpenRouter / Qwen3-32B, pinned to DeepInfra for reproducibility).
+
+**Limits**
+- Question must tokenize to **≤{MAX_QUESTION_TOKENS} Qwen tokens** (else the call fails and no file is written).
+- The reply is truncated to the **first {MAX_RESPONSE_TOKENS} tokens** (reasoning / thinking excluded). Phrase the question so a concise answer still fits inside that budget.
+- The same question is asked **{DEFAULT_NUM_SAMPLES} times by default**. Override with `--times N`.
+- No logit access.
+
+**Scope**
+- **Strategy agent:** may query any few-shot `<example_id>` (filename stem in `Examples.csv`).
+- **Test agent:** may only query its own assigned example — `AGENT_EXAMPLE_ID` names it; other IDs are rejected.
+
+**Output contract.** Prints a `status:` line to stdout:
+- On success, also prints `responses:` and `details:` — the latter names a new file `ask_<n>.csv` in your current directory with columns `status,example_id,question,question_tokens,model,num_samples,sample_index,response,response_tokens,response_raw`.
+- On failure (token limit exceeded, wrong example id, etc.), prints the reason and writes **no** file.
+""".strip()
+
+
+def build_parser() -> ArgumentParser:
+    parser = ArgumentParser(
+        prog="ask",
+        description="Ask a short follow-up question about an example via OpenRouter.",
+    )
+    parser.add_argument("example_id")
+    parser.add_argument("question")
+    parser.add_argument(
+        "--times",
+        type=int,
+        default=DEFAULT_NUM_SAMPLES,
+        help=f"Number of times to resample the same question (default: {DEFAULT_NUM_SAMPLES}).",
+    )
+    return parser
 
 
 def get_tokenizer():
@@ -110,14 +152,16 @@ def extract_content(resp: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 2:
-        fail('usage: ask <example_id> "<question>"')
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
-    example_id = argv[0]
-    question = argv[1] if len(argv) == 2 else " ".join(argv[1:])
+    example_id = args.example_id
+    question = args.question
     question = question.strip()
     if not question:
         fail("question must be non-empty")
+    if args.times < 1:
+        fail(f"--times must be >= 1, got {args.times}")
 
     env = get_env()
     check_test_agent_scope(env, example_id)
@@ -144,28 +188,36 @@ def main(argv: list[str]) -> int:
         payload if isinstance(payload, str)
         else json.dumps(payload, ensure_ascii=False)
     )
-    resp = call_openrouter(example_content, question, model)
-    raw = extract_content(resp)
-
-    resp_ids = tok.encode(raw).ids
-    truncated_ids = resp_ids[:MAX_RESPONSE_TOKENS]
-    truncated = tok.decode(truncated_ids)
-
     details_path = next_numbered_output_path("ask")
-    row = {
-        "status": "success",
-        "example_id": example_id,
-        "question": question,
-        "question_tokens": q_count,
-        "model": model,
-        "response": truncated,
-        "response_tokens": len(truncated_ids),
-        "response_raw": raw,
-    }
-    write_csv(details_path, list(row.keys()), [row])
+    rows = []
+    truncated_responses = []
+    for sample_index in range(1, args.times + 1):
+        resp = call_openrouter(example_content, question, model)
+        raw = extract_content(resp)
+
+        resp_ids = tok.encode(raw).ids
+        truncated_ids = resp_ids[:MAX_RESPONSE_TOKENS]
+        truncated = tok.decode(truncated_ids)
+        truncated_responses.append(truncated)
+
+        rows.append({
+            "status": "success",
+            "example_id": example_id,
+            "question": question,
+            "question_tokens": q_count,
+            "model": model,
+            "num_samples": args.times,
+            "sample_index": sample_index,
+            "response": truncated,
+            "response_tokens": len(truncated_ids),
+            "response_raw": raw,
+        })
+    write_csv(details_path, list(rows[0].keys()), rows)
 
     print(f"status: success")
-    print(f"response: {truncated}")
+    print("responses:")
+    for sample_index, truncated in enumerate(truncated_responses, start=1):
+        print(f"{sample_index}: {truncated}")
     print(f"details: {details_path.name}")
     return 0
 

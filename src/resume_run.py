@@ -20,26 +20,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from agent_backend import build_agent_launch_spec, get_agent_backend, prepare_codex_home
+from agent_backend import (
+    build_agent_launch_spec,
+    get_agent_backend,
+    load_bash_exports,
+    prepare_codex_home,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-def parse_bashrc(path: Path) -> dict:
-    env = {}
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if not line.startswith("export "):
-            continue
-        kv = line[len("export "):]
-        if "=" not in kv:
-            continue
-        k, _, v = kv.partition("=")
-        env[k.strip()] = v.strip().strip('"').strip("'")
-    if "PATH" in env and "$PATH" in env["PATH"]:
-        env["PATH"] = env["PATH"].replace("$PATH", os.environ.get("PATH", ""))
-    return env
-
 
 def is_stub_strategy(part_dir: Path) -> bool:
     f = part_dir / "strategy" / "STRATEGY.md"
@@ -59,8 +47,7 @@ def ensure_codex_home(part_dir: Path, env: dict[str, str]) -> None:
 
 def run_strategy_agent(part_dir: Path) -> int:
     bashrc = part_dir / "agent.bashrc"
-    env = os.environ.copy()
-    env.update(parse_bashrc(bashrc))
+    env = load_bash_exports(bashrc, os.environ.copy())
     ensure_codex_home(part_dir, env)
     env["BASH_ENV"] = str(bashrc)
     env["AGENT_TYPE"] = "strategy"
@@ -101,8 +88,7 @@ def run_strategy_agent(part_dir: Path) -> int:
 
 def run_test_phase(part_dir: Path, max_workers: int) -> int:
     bashrc = part_dir / "agent.bashrc"
-    env = os.environ.copy()
-    env.update(parse_bashrc(bashrc))
+    env = load_bash_exports(bashrc, os.environ.copy())
     ensure_codex_home(part_dir, env)
     env["BASH_ENV"] = str(bashrc)
     env["AGENT_TEST_MAX_WORKERS"] = str(max_workers)

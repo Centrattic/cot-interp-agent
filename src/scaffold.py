@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import csv
+import importlib.util
 import json
 import os
 import shutil
@@ -25,6 +26,7 @@ from agent_backend import (
     VALID_AGENT_BACKENDS,
     build_agent_launch_spec,
     get_agent_backend,
+    load_bash_exports,
     prepare_codex_home,
     supports_add_dirs,
 )
@@ -183,28 +185,40 @@ def _write_examples_csv(strategy_dir: Path, index: list[dict]) -> None:
         writer.writerows(index)
 
 
+def _load_tool_readme_description(tool_name: str) -> str | None:
+    """Load a tool's README blurb from its implementation, if it exposes one."""
+    tool_path = ROOT / "src" / "tools" / f"{tool_name}.py"
+    if not tool_path.exists():
+        return None
+
+    tools_dir = str(tool_path.parent)
+    added_path = False
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+        added_path = True
+
+    try:
+        spec = importlib.util.spec_from_file_location(f"tool_{tool_name}", tool_path)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        factory = getattr(module, "get_readme_description", None)
+        if callable(factory):
+            return factory()
+        return None
+    finally:
+        if added_path:
+            try:
+                sys.path.remove(tools_dir)
+            except ValueError:
+                pass
+
+
 TOOL_DESCRIPTIONS = {
     # Key = tool name. Value = multi-line markdown blurb rendered into strategy/README.md
     # under "## Research Tools". Both the strategy agent and the test agent read that
     # README, so each blurb should cover both scopes (what each agent may query).
-    "ask": """### `ask <example_id> "<question>"`
-
-Ask a short follow-up question about an example via an oracle model
-(OpenRouter / Qwen3-32B, pinned to DeepInfra for reproducibility).
-
-**Limits**
-- Question must tokenize to **≤20 Qwen tokens** (else the call fails and no file is written).
-- The reply is truncated to the **first 5 tokens** (reasoning / thinking excluded). Because the reply is so short, **phrase the question to demand a very concise answer** (e.g. "answer in 3 words", "yes or no only", "one word"). Open-ended phrasings get cut mid-sentence.
-- No logit access.
-
-**Scope**
-- **Strategy agent:** may query any few-shot `<example_id>` (filename stem in `Examples.csv`).
-- **Test agent:** may only query its own assigned example — `AGENT_EXAMPLE_ID` names it; other IDs are rejected.
-
-**Output contract.** Prints a `status:` line to stdout:
-- On success, also prints `response:` and `details:` — the latter names a new file `ask_<n>.csv` in your current directory with columns `status,example_id,question,question_tokens,model,response,response_tokens,response_raw`.
-- On failure (token limit exceeded, wrong example id, etc.), prints the reason and writes **no** file.
-""".strip(),
     "top_10_logits": """### `top_10_logits <example_id> <token_position>`
 
 Print the top-10 tokens and their logprob values at `token_position` within
@@ -477,7 +491,9 @@ def render_tools_section(tools: list[str]) -> str:
         "(The system prompt does not enumerate tools — this section is authoritative.)\n"
     ]
     for name in tools:
-        desc = TOOL_DESCRIPTIONS.get(name, f"`{name}` — (no description available)")
+        desc = _load_tool_readme_description(name)
+        if desc is None:
+            desc = TOOL_DESCRIPTIONS.get(name, f"`{name}` — (no description available)")
         lines.append(desc)
         lines.append("")  # blank line between tool blurbs
     return "\n".join(lines)
@@ -601,13 +617,12 @@ def _launch_strategy_agent(
     user_prompt = (
         "Read README.md in the current directory for the task brief, available tools, "
         "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
+        "test each enabled research tool at least once and look for creative relevant uses, "
         "and run `run-tests` when ready."
     )
     system_prompt = strategy_prompt_path.read_text(encoding="utf-8")
-    project_settings = ROOT / ".claude" / "settings.json"
-    env = os.environ.copy()
-    env.update(_parse_bashrc_exports(bashrc_path, env))  # inject for zsh
-    env["BASH_ENV"] = str(bashrc_path)                    # and keep for bash
+    env = load_bash_exports(bashrc_path, os.environ.copy())
+    env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "strategy"
     backend = get_agent_backend(env)
     launch = build_agent_launch_spec(
