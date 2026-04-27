@@ -30,6 +30,7 @@ from agent_backend import (
     prepare_codex_home,
     supports_add_dirs,
 )
+from prompt_builder import build_strategy_system_prompt
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -221,26 +222,27 @@ TOOL_DESCRIPTIONS = {
     # README, so each blurb should cover both scopes (what each agent may query).
     "top_10_logits": """### `top_10_logits <example_id> <token_position>`
 
-Print the top-10 tokens and their logprob values at `token_position` within
-the example's chain-of-thought, read from a precomputed sidecar
-(`<example_id>.logits.npz` next to the example's JSON).
+Inspect top-token distributions from precomputed CoT logprobs.
 
-**Positions are CoT-relative.** `token_position = 0` is the first token of
-`cot_prefix` (what you see in example.json). Valid range is
-`[0, len(cot_prefix_tokens))`.
+**Anchor modes**
+- `top_10_logits <example_id> <token_position>` probes one exact CoT-relative position.
+- `top_10_logits <example_id> --last-k K` averages across the last `K` CoT tokens.
+- `top_10_logits <example_id> --around-text "..."` finds the **last** case-insensitive match of the text in the visible CoT and averages across that matched token span.
+- Add `--diff` to compare all visible positive vs negative examples using the selected anchor. This is mainly useful for the strategy agent.
 
 **Scope**
 - **Strategy agent:** any few-shot `<example_id>`.
 - **Test agent:** only its assigned `AGENT_EXAMPLE_ID`.
 
 **Limits**
-- Position must be inside the CoT range (fails with a clear error otherwise).
+- Choose exactly one anchor: `<token_position>`, `--last-k`, or `--around-text`.
+- Exact positions must be inside the CoT range (fails with a clear error otherwise).
 - If the sidecar file is missing, the tool fails and tells you to run
   `src/precompute_logits.py` for this task.
 
 **Output**
-- Writes `top_10_logits_<n>.csv` in the current directory with columns
-  `example_id,token_position,rank,token,logprob`.
+- Single-example mode writes `top_10_logits_<n>.csv`.
+- Diff mode writes `top_10_logits_diff_<n>.csv`.
 """.strip(),
     "top10_entropy": """### `top10_entropy <example_id> <token_position>`
 
@@ -597,6 +599,7 @@ def _launch_strategy_agent(
     strategy_dir: Path,
     trace_base: Path,
     bashrc_path: Path,
+    tools: list[str],
     label: str = "",
 ) -> int:
     """Run one strategy-agent subprocess in strategy_dir. Writes
@@ -620,7 +623,7 @@ def _launch_strategy_agent(
         "test each enabled research tool at least once and look for creative relevant uses, "
         "and run `run-tests` when ready."
     )
-    system_prompt = strategy_prompt_path.read_text(encoding="utf-8")
+    system_prompt = build_strategy_system_prompt(PROMPTS_DIR, tools)
     env = load_bash_exports(bashrc_path, os.environ.copy())
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "strategy"
@@ -813,6 +816,7 @@ def create_run(
             strategy_dir=run_dir / "strategy",
             trace_base=trace_base,
             bashrc_path=run_dir / "agent.bashrc",
+            tools=tools,
         )
         run_meta["strategy_exit_code"] = code
         try:
@@ -851,6 +855,7 @@ def create_run(
                 part_dir / "strategy",
                 trace_dir / f"partition-{k:03d}-strategy-trace",
                 part_bashrc,
+                tools,
                 f"partition-{k:03d}",
             ))
 
@@ -859,8 +864,8 @@ def create_run(
         exit_codes = {}
         with ThreadPoolExecutor(max_workers=min(max_parallel, n_strategies)) as ex:
             futures = {
-                ex.submit(_launch_strategy_agent, sd, tb, br, lbl): lbl
-                for (sd, tb, br, lbl) in partition_launch_jobs
+                ex.submit(_launch_strategy_agent, sd, tb, br, tools, lbl): lbl
+                for (sd, tb, br, tools, lbl) in partition_launch_jobs
             }
             for fut in as_completed(futures):
                 lbl = futures[fut]

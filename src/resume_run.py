@@ -14,6 +14,7 @@ partition internally runs up to AGENT_TEST_MAX_WORKERS test agents.
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -26,6 +27,7 @@ from agent_backend import (
     load_bash_exports,
     prepare_codex_home,
 )
+from prompt_builder import build_strategy_system_prompt
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -58,7 +60,8 @@ def run_strategy_agent(part_dir: Path) -> int:
         "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
         "and run `run-tests` when ready."
     )
-    system_prompt = prompt_path.read_text(encoding="utf-8")
+    run_meta = json.loads((part_dir.parent / "run.json").read_text(encoding="utf-8"))
+    system_prompt = build_strategy_system_prompt(prompt_path.parent, run_meta.get("tools", []))
     backend = get_agent_backend(env)
     launch = build_agent_launch_spec(
         backend=backend,

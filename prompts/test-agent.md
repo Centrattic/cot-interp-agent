@@ -30,13 +30,7 @@ Forbidden:
 Any research tools enabled for this run are listed in **`strategy/README.md`** with full usage documentation. **Read that file for tool docs.**
 
 Test-agent scope: you may only query your own assigned example — the environment variable `AGENT_EXAMPLE_ID` names it, and tool invocations with any other `<example_id>` are rejected.
-
-## Available Commands
-
-- `sae search <query> [--n N]` — Search SAE feature labels by keyword
-- `sae feature <feature_id>` — Show feature activation across few-shot examples
-- `sae top-features <example_id> [--n N]` — Show top SAE features for an example (must match `AGENT_EXAMPLE_ID`)
-
+ 
 ## Output
 
 Write your answer to `answer.txt` in your current directory. The file must contain exactly one word with no other text (whitespace aside):

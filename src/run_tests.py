@@ -24,6 +24,7 @@ from agent_backend import (
     load_bash_exports,
     supports_add_dirs,
 )
+from prompt_builder import build_test_system_prompt
 
 def get_env():
     """Read required environment variables set by agent.bashrc."""
@@ -153,7 +154,7 @@ def run_single_test(
         f"exactly `yes` or `no`, no other text."
     )
 
-    system_prompt = prompt_path.read_text(encoding="utf-8")
+    system_prompt = build_test_system_prompt(prompt_path.parent, run_dir)
     project_settings = Path(os.environ["SCAFFOLD_ROOT"]) / ".claude" / "settings.json"
     env = load_bash_exports(bashrc_path, os.environ.copy())
     env["BASH_ENV"] = str(bashrc_path)

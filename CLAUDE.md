@@ -25,4 +25,4 @@ This is a scaffold for running interpretability research agents on binary classi
 
 1. Add Python implementation in `src/tools/`
 2. Create a shell wrapper in `bin/` that calls it
-3. Document the command in `prompts/strategy-agent.md`
+3. Document the command in the generated tool docs used by `strategy/README.md` and prompt assembly

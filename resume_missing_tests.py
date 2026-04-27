@@ -14,6 +14,9 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+sys.path.insert(0, str((Path(__file__).resolve().parent / "src")))
+from prompt_builder import build_test_system_prompt
+
 SCAFFOLD_ROOT = Path(__file__).resolve().parent
 RUNS_DIR = SCAFFOLD_ROOT / "agent-runs"
 TRACES_DIR = SCAFFOLD_ROOT / "agent-traces"
@@ -82,7 +85,7 @@ def run_one(job: dict) -> dict:
     trace_file = trace_dir / f"test-{idx:03d}-trace.txt"
     bashrc_path = run_dir / "agent.bashrc"
     prompt_path = PROMPTS_DIR / "test-agent.md"
-    system_prompt = prompt_path.read_text(encoding="utf-8")
+    system_prompt = build_test_system_prompt(prompt_path.parent, run_dir)
 
     user_prompt = (
         f"You are classifying one test example (id={example_id}).\n"

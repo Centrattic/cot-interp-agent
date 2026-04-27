@@ -29,7 +29,6 @@ from pathlib import Path
 
 import numpy as np
 
-
 SCAFFOLD_ROOT = Path(__file__).resolve().parent.parent
 TASK_NAME = "termination"
 SOURCE_ROOT = SCAFFOLD_ROOT / "data" / "termination" / "qwen-3-32b"

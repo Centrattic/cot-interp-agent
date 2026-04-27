@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ask the model a short follow-up question about an example,
-# resampling multiple times by default. No logit access.
+# resampling multiple times by default and reporting summary stats. No logit access.
 #
 # Usage: ask <example_id> "<question>" [--times N]
 
