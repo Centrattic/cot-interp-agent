@@ -1,5 +1,6 @@
 data/**
 !data/**/
+!data/**/*.json
 !data/termination/qwen-3-32b/**/*.sae.npz
 agent-runs/
 .env

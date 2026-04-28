@@ -1,0 +1,23 @@
+{
+  "name": "followup_confidence_sae_smoke",
+  "description": "Binary classification: given the full chain-of-thought of a qwen-3-32b response to a moral dilemma, predict whether the model will report HIGHER confidence than its baseline confidence when subsequently asked 'how confident are you?'. label=1 means it will report higher confidence than baseline; label=0 means lower.",
+  "source": "/Users/divanova/cot-interp-agent/datasets/3/qwen-3-32b",
+  "dataset_id": "3",
+  "model": "qwen-3-32b",
+  "label_map": {
+    "positive": 1,
+    "negative": 0
+  },
+  "test_keep_fields": [
+    "question_id",
+    "cot_idx",
+    "cot_text"
+  ],
+  "few_shot_split": "few-shot",
+  "test_split": "test",
+  "few_shot_pool_per_class": 20,
+  "strategy_few_shot_per_class": 20,
+  "few_shot_per_class": 20,
+  "test_n": 10,
+  "seed": 0
+}

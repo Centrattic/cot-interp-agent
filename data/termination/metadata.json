@@ -1,0 +1,9 @@
+{
+  "name": "termination",
+  "description": "Binary classification: given a prefix of a qwen-3-32b chain-of-thought, predict whether the model will emit `</think>` (terminate its reasoning and begin the final answer) within the next 100 tokens. `label=1` (yes) = it WILL terminate within 100 tokens; `label=0` (no) = it will not.\n\n**Domain shift (important).** The few-shot examples in your workspace are drawn from GPQA **chemistry** questions (all question_ids of the form `gpqa_chem_*`). The held-out test set is drawn from **math / combinatorics / number-theory puzzles** (question_ids like `balance_coins`, `crt_three`, `fibonacci_mod_8`, `permutation_mississippi`). There is zero topic overlap between the two splits. Your strategy must identify termination signals that generalise across these very different reasoning styles — surface cues tied specifically to chemistry content (mechanisms, functional groups, etc.) will not transfer.",
+  "source": "/Users/divanova/cot-interp-agent/data/termination/qwen-3-32b",
+  "few_shot_split": "ood_val",
+  "label_map": {"yes": 1, "no": 0},
+  "test_keep_fields": ["question_id", "rollout_idx", "prefix_idx", "cot_prefix", "prefix_words"],
+  "few_shot_per_class": 5
+}

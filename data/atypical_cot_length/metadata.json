@@ -1,0 +1,23 @@
+{
+  "name": "atypical_cot_length",
+  "description": "Binary classification: given one qwen-3-32b chain-of-thought rollout, predict whether its token length is atypically long or atypically short relative to the model's distribution for that prompt (|z| > 1 SD). label=1 means the chain-of-thought is atypically LONG; label=0 means atypically SHORT.",
+  "source": "/Users/divanova/cot-interp-agent/datasets/7/qwen-3-32b",
+  "dataset_id": "7",
+  "model": "qwen-3-32b",
+  "label_map": {
+    "long": 1,
+    "short": 0
+  },
+  "test_keep_fields": [
+    "question_id",
+    "rollout_idx",
+    "chain_of_thought"
+  ],
+  "few_shot_split": "few-shot",
+  "test_split": "test",
+  "few_shot_pool_per_class": 20,
+  "strategy_few_shot_per_class": 20,
+  "few_shot_per_class": 20,
+  "test_n": 100,
+  "seed": 0
+}
