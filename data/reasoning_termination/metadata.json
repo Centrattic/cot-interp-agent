@@ -1,6 +1,6 @@
 {
   "name": "reasoning_termination",
-  "description": "Binary classification: given a prefix of a qwen-3-32b chain-of-thought, predict whether the model will emit `</think>` (i.e. terminate its reasoning and begin the final answer) within the next 100 tokens. label=1 means the model WILL terminate reasoning within 100 tokens; label=0 means it will not.",
+  "description": "Binary classification: given a prefix of a qwen-3-32b chain-of-thought, predict whether the model will emit `</think>` (i.e. terminate its reasoning and begin the final answer) within the next 100 tokens. label=1 means the model WILL terminate reasoning within 100 tokens; label=0 means it will not. Default to **no** unless overwhelming, unambiguous evidence in the example warrants **yes**.",
   "source": "/Users/divanova/cot-interp-agent/datasets/1/qwen-3-32b",
   "dataset_id": "1",
   "model": "qwen-3-32b",
