@@ -17,8 +17,28 @@ Your current directory is `strategy/` which contains:
 3. Analyze patterns that distinguish positive (yes) from negative (no) examples, creating any additional analysis .csv files you need to.
 4. If research tools are enabled for this run, think creatively about how each tool might be useful. You should always call each tool a couple times while exploring, and look for creative but relevant ways to use it to improve or stress-test your strategy.
 5. Write a clear, actionable classification strategy to STRATEGY.md that another agent can follow.
-6. Before running `run-tests`, apply your draft strategy to the few-shot examples as if they were held-out: predict each one using only the rules you've written, compare against the known label, and iterate if the rules don't reliably recover the ground truth. Treat your few-shot as a validation set rather than the data your strategy is fit to.
-7. When confident in your strategy, run `run-tests` to evaluate it. **You must call `run-tests` before ending your session** — a STRATEGY.md without a test pass is wasted work. Run it exactly once, in the foreground, and let it complete.
+6. Before exiting, apply your draft strategy to the few-shot examples as if they were held-out: predict each one using only the rules you've written, compare against the known label, and iterate if the rules don't reliably recover the ground truth. Treat your few-shot as a validation set rather than the data your strategy is fit to. Run the **calibration check** below; do not exit until it passes.
+7. When confident in your strategy, save `STRATEGY.md` and **end your session immediately**. Do **not** run `run-tests` yourself — the orchestrator runs evaluation after you exit, and any output you generate while waiting is wasted. A finalized `STRATEGY.md` plus a clean exit is the deliverable.
+
+## Avoiding spurious correlations
+
+Few-shot examples are a balanced subsample of a larger pool. Some signals look discriminative on 40 examples but are sampling artifacts that won't transfer to the held-out test set:
+
+- **Metadata indices** (`sample_idx`, `rollout_idx`, `prefix_idx`, filename numbering, `question_id`). If `sample_idx == 0` is 100% positive in your few-shot, that is usually because the pool was constructed by sampling K rollouts per source question and balancing by class — not because the index itself is a robust signal. Memorizing `sample_idx → label` mappings (especially with per-`question_id` exceptions) overfits the slice you happened to draw.
+- **Sidecar files (`.sae.npz`, `.npy`, `.logits.npz`).** These sit next to every JSON by design. **If no research tool is listed under "Research Tools" in `README.md`, do not have your strategy load them or reference specific feature ids/thresholds.** Without an SAE tool to characterize features, you would be memorizing fewshot numerics that fire on many test cases too. Use the text alone.
+- **A single phrase memorized from the few-shot positives** ("Therefore", "On the whole", "I am malfunctioning", "system reset"). Before adopting any phrase as a yes trigger, scan the negative few-shot examples — if the phrase also appears there, it is not discriminative on its own and needs to be combined with a stronger structural cue.
+
+Use task-general signals: the structural state of the reasoning, the semantic commitment of the last assistant turn, the presence/absence of specific actions, etc.
+
+## Calibration check (mandatory before exit)
+
+After drafting STRATEGY.md, simulate it on your full few-shot:
+
+1. For each example, predict yes/no using **only** the rules in STRATEGY.md (don't peek at the label while applying).
+2. Tabulate TPR (recall on label=1) and TNR (recall on label=0) **separately**.
+3. The held-out test set is roughly class-balanced and you are scored on **gmean² = TPR × TNR**. A strategy with TPR=1.0, TNR=0.3 scores 0.30; one with TPR=0.7, TNR=0.7 scores 0.49. Balance matters more than sensitivity.
+4. If `|TPR − TNR| > 0.2`, the strategy is biased toward the over-firing class. Tighten that side: require multiple independent signals before flipping; replace vague triggers with stricter task-specific cues; raise thresholds. Iterate until TPR and TNR are within 0.15 of each other.
+5. If your strategy fires the same answer on >55% of fewshot inputs, recalibrate — neither class should dominate.
 
 ## Important
 

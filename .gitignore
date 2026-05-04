@@ -3,6 +3,7 @@ data/**
 !data/**/*.json
 !data/termination/qwen-3-32b/**/*.sae.npz
 agent-runs/
+.validation-private/
 .env
 agent-traces/
 /.agent-shell/

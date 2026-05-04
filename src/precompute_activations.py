@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
-"""Extract layer-32 residual-stream activations for the termination task and
+"""Extract layer-32 residual-stream activations for cot-interp-agent tasks and
 encode them through the Qwen3-32B SAE (trainer_2).
 
-For every example JSON in `data/termination/qwen-3-32b/<split>/`, this:
+For every example JSON under each task's source pool
+(`datasets/<id>/qwen-3-32b/<split>/<example>.json`), this:
   1. Reconstructs the exact model input the rollout was sampled from, by
      reusing `_task_io.build_prompt_parts` (chat template + `<think>\\n` +
-     cot_prefix).
+     example's CoT field).
   2. Runs a single Qwen3-32B forward pass and grabs the residual stream at
      layer 32 (post-residual) at the CoT-token positions only.
-  3. Encodes those activations through the JumpReLU SAE in tools/sae_encode.py
-     and writes a `<example_stem>.sae.npz` sidecar next to the JSON.
+  3. Encodes those activations through the JumpReLU SAE in
+     tools/sae_encode.py and writes a `<example_stem>.sae.npz` sidecar next
+     to the source JSON.
 
 The intermediate `.npy` is not persisted by default (pass `--keep-npy` for
 debugging). The `.sae.npz` sidecars are what the agent-facing `sae` tool
-consumes.
+consumes (via runtime sampling into per-run few-shot dirs).
 
 Usage (on a GPU host with Qwen3-32B):
-    python src/precompute_activations.py --splits test,ood_val
+    # all six Qwen tasks, both few-shot and test pools
+    python src/precompute_activations.py --tasks all
+
+    # one task, smoke test
+    python src/precompute_activations.py --tasks followup_confidence --limit 5
 """
 
 from __future__ import annotations
@@ -30,11 +36,19 @@ from pathlib import Path
 import numpy as np
 
 SCAFFOLD_ROOT = Path(__file__).resolve().parent.parent
-TASK_NAME = "termination"
-SOURCE_ROOT = SCAFFOLD_ROOT / "data" / "termination" / "qwen-3-32b"
 SAE_HIDDEN_LAYER = 32  # resid_post_layer_32 → hidden_states[33] in HF
 D_MODEL = 5120
 DEFAULT_MODEL = "Qwen/Qwen3-32B"
+
+# All six Qwen3-32B tasks (gemma_self_deletion uses a different model and SAE).
+ALL_QWEN_TASKS = (
+    "reasoning_termination",
+    "followup_confidence",
+    "user_preference_sycophancy",
+    "stanford_hint",
+    "atypical_answer",
+    "atypical_cot_length",
+)
 
 # Pull in the shared prompt builder and the SAE encoder.
 sys.path.insert(0, str(SCAFFOLD_ROOT / "src" / "tools"))
@@ -42,13 +56,30 @@ from _task_io import build_prompt_parts  # noqa: E402
 import sae_encode  # noqa: E402
 
 
+def _load_task_meta(task: str) -> tuple[Path, dict[str, str]]:
+    """Return (source_root, {alias: split_dir_name}) for a task.
+
+    `source_root` is the qwen-3-32b dir under datasets/<id>/.
+    """
+    meta_path = SCAFFOLD_ROOT / "data" / task / "metadata.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    source_root = Path(meta["source"])
+    splits = {
+        "few-shot": meta.get("few_shot_split", "few-shot"),
+        "test": meta.get("test_split", "test"),
+    }
+    return source_root, splits
+
+
 def process_one(
     json_path: Path,
     *,
+    task: str,
     split: str,
     tokenizer,
     model,
     sae_weights: dict,
+    source_root: Path,
     keep_npy: bool,
     force: bool,
     device: str,
@@ -61,11 +92,17 @@ def process_one(
         return ("skip", -1)
 
     example = json.loads(json_path.read_text(encoding="utf-8"))
-    prefix_ids, cot_ids = build_prompt_parts(
-        TASK_NAME, example, tokenizer, SOURCE_ROOT, split,
-    )
-    full_ids = prefix_ids + cot_ids
+    try:
+        prefix_ids, cot_ids = build_prompt_parts(
+            task, example, tokenizer, source_root, split,
+        )
+    except NotImplementedError as e:
+        return (f"unsupported:{e}", -1)
 
+    if not cot_ids:
+        return ("empty_cot", 0)
+
+    full_ids = prefix_ids + cot_ids
     input_ids = torch.tensor([full_ids], dtype=torch.long, device=device)
     with torch.no_grad():
         out = model(input_ids=input_ids, output_hidden_states=True, use_cache=False)
@@ -91,14 +128,105 @@ def process_one(
     return ("wrote", int(result["active_feature_ids"].size))
 
 
+def run_split(
+    *,
+    task: str,
+    source_root: Path,
+    split_alias: str,
+    split_dir_name: str,
+    tokenizer,
+    model,
+    sae_weights: dict,
+    keep_npy: bool,
+    force: bool,
+    limit: int | None,
+    device: str,
+) -> tuple[int, int, int, list[str]]:
+    """Process one (task, split) pair. Returns (seen, wrote, skipped, errors)."""
+    split_dir = source_root / split_dir_name
+    if not split_dir.is_dir():
+        print(f"  [{task}/{split_alias}] split dir not found: {split_dir}", flush=True)
+        return (0, 0, 0, [])
+
+    files = sorted(split_dir.glob("*.json"))
+    if limit is not None:
+        files = files[:limit]
+
+    print(f"\n[{task}/{split_alias}] {len(files)} examples in {split_dir}", flush=True)
+    seen = wrote = skipped = 0
+    errors: list[str] = []
+    n_active_samples: list[int] = []
+    t0 = time.time()
+
+    for i, jp in enumerate(files, 1):
+        seen += 1
+        try:
+            status, n_active = process_one(
+                jp,
+                task=task,
+                split=split_dir_name,
+                tokenizer=tokenizer,
+                model=model,
+                sae_weights=sae_weights,
+                source_root=source_root,
+                keep_npy=keep_npy,
+                force=force,
+                device=device,
+            )
+        except Exception as e:
+            errors.append(f"{jp.name}: {e}")
+            print(f"  ({i}/{len(files)}) ERROR {jp.stem}: {e}", flush=True)
+            continue
+
+        if status == "skip":
+            skipped += 1
+            continue
+        if status.startswith("unsupported"):
+            errors.append(f"{jp.name}: {status}")
+            print(f"  ({i}/{len(files)}) skip-unsupported {jp.stem}: {status[12:]}", flush=True)
+            continue
+        if status == "empty_cot":
+            errors.append(f"{jp.name}: empty CoT")
+            print(f"  ({i}/{len(files)}) skip-empty {jp.stem}", flush=True)
+            continue
+
+        wrote += 1
+        n_active_samples.append(n_active)
+        if i % 50 == 0 or i == len(files):
+            elapsed = time.time() - t0
+            rate = i / elapsed if elapsed > 0 else 0
+            print(
+                f"  ({i}/{len(files)}) {jp.stem}.sae.npz n_active={n_active} "
+                f"[{rate:.2f} ex/s, {elapsed:.0f}s elapsed]",
+                flush=True,
+            )
+
+    summary = (
+        f"min={min(n_active_samples) if n_active_samples else 'n/a'} "
+        f"median={int(np.median(n_active_samples)) if n_active_samples else 'n/a'} "
+        f"max={max(n_active_samples) if n_active_samples else 'n/a'}"
+    )
+    print(
+        f"[{task}/{split_alias}] done in {time.time() - t0:.1f}s — "
+        f"seen={seen} wrote={wrote} skipped={skipped} errors={len(errors)} "
+        f"n_active: {summary}",
+        flush=True,
+    )
+    return seen, wrote, skipped, errors
+
+
 def main():
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument(
-        "--splits", default="test,ood_val",
-        help="Comma-separated raw split names under data/termination/qwen-3-32b/ "
-             "(default: %(default)s)",
+        "--tasks", default="all",
+        help="Comma-separated task names, or 'all' for all six Qwen tasks "
+             "(default: %(default)s). Available: " + ",".join(ALL_QWEN_TASKS),
+    )
+    p.add_argument(
+        "--splits", default="few-shot,test",
+        help="Comma-separated split aliases (default: %(default)s).",
     )
     p.add_argument("--model", default=DEFAULT_MODEL, help="HF model id")
     p.add_argument(
@@ -117,7 +245,69 @@ def main():
         "--limit", type=int, default=None,
         help="Process at most N examples per split (for smoke-testing)",
     )
+    p.add_argument(
+        "--cpu-smoke", action="store_true",
+        help="Skip model load and just exercise build_prompt_parts on the first "
+             "example of each split (CPU-only debugging).",
+    )
     args = p.parse_args()
+
+    if args.tasks.strip().lower() == "all":
+        tasks = list(ALL_QWEN_TASKS)
+    else:
+        tasks = [t.strip() for t in args.tasks.split(",") if t.strip()]
+        unknown = [t for t in tasks if t not in ALL_QWEN_TASKS]
+        if unknown:
+            p.error(f"unknown task(s): {unknown}; known: {ALL_QWEN_TASKS}")
+
+    split_aliases = [s.strip() for s in args.splits.split(",") if s.strip()]
+
+    # Validate task metadata + split dirs up front so we fail fast.
+    task_specs = []
+    for task in tasks:
+        source_root, splits_map = _load_task_meta(task)
+        for alias in split_aliases:
+            if alias not in splits_map:
+                p.error(f"unknown split alias {alias!r} for task {task!r}; "
+                        f"known: {list(splits_map)}")
+            d = source_root / splits_map[alias]
+            if not d.is_dir():
+                p.error(f"[{task}/{alias}] split dir not found: {d}")
+        task_specs.append((task, source_root, splits_map))
+
+    print(f"[plan] {len(tasks)} tasks × {len(split_aliases)} splits", flush=True)
+    for task, source_root, splits_map in task_specs:
+        for alias in split_aliases:
+            d = source_root / splits_map[alias]
+            n = len(list(d.glob("*.json")))
+            print(f"  {task}/{alias}: {n} files in {d}", flush=True)
+
+    if args.cpu_smoke:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.tokenizer or args.model, trust_remote_code=True,
+        )
+        print("\n[cpu-smoke] tokenizing one example per (task,split):", flush=True)
+        for task, source_root, splits_map in task_specs:
+            for alias in split_aliases:
+                d = source_root / splits_map[alias]
+                files = sorted(d.glob("*.json"))
+                if not files:
+                    continue
+                jp = files[0]
+                example = json.loads(jp.read_text(encoding="utf-8"))
+                try:
+                    prefix_ids, cot_ids = build_prompt_parts(
+                        task, example, tokenizer, source_root, splits_map[alias],
+                    )
+                    print(
+                        f"  {task}/{alias} {jp.stem}: "
+                        f"prefix={len(prefix_ids)}tok cot={len(cot_ids)}tok",
+                        flush=True,
+                    )
+                except Exception as e:
+                    print(f"  {task}/{alias} {jp.stem}: ERROR {e}", flush=True)
+        return
 
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -126,13 +316,6 @@ def main():
         p.error("CUDA not available; this extractor requires a GPU")
 
     device = "cuda"
-    splits = [s.strip() for s in args.splits.split(",") if s.strip()]
-
-    # Validate split dirs up front.
-    for split in splits:
-        d = SOURCE_ROOT / split
-        if not d.is_dir():
-            p.error(f"split dir not found: {d}")
 
     tokenizer_name = args.tokenizer or args.model
     print(f"[load] tokenizer: {tokenizer_name}", flush=True)
@@ -153,60 +336,39 @@ def main():
     model.eval()
     print(f"[load] model ready in {time.time() - t0:.1f}s", flush=True)
 
-    # Device the *input* should go on. With device_map="auto" over a single GPU
-    # the whole model lives on cuda:0; input_ids on the same device is fine.
-    input_device = device
-
-    total_seen = 0
-    total_wrote = 0
-    n_active_samples: list[int] = []
-    for split in splits:
-        split_dir = SOURCE_ROOT / split
-        files = sorted(split_dir.glob("*.json"))
-        if args.limit is not None:
-            files = files[: args.limit]
-        print(f"\n[{split}] {len(files)} examples", flush=True)
-
-        t_split = time.time()
-        for i, jp in enumerate(files, 1):
-            total_seen += 1
-            try:
-                status, n_active = process_one(
-                    jp,
-                    split=split,
-                    tokenizer=tokenizer,
-                    model=model,
-                    sae_weights=sae_weights,
-                    keep_npy=args.keep_npy,
-                    force=args.force,
-                    device=input_device,
-                )
-            except Exception as e:
-                print(f"  ({i}/{len(files)}) ERROR {jp.stem}: {e}", flush=True)
-                continue
-
-            if status == "skip":
-                print(f"  ({i}/{len(files)}) skip {jp.stem} (exists)", flush=True)
-                continue
-
-            total_wrote += 1
-            n_active_samples.append(n_active)
-            print(
-                f"  ({i}/{len(files)}) wrote {jp.stem}.sae.npz  "
-                f"n_active={n_active}",
-                flush=True,
+    grand_seen = grand_wrote = grand_skipped = 0
+    grand_errors: list[str] = []
+    overall_t0 = time.time()
+    for task, source_root, splits_map in task_specs:
+        for alias in split_aliases:
+            seen, wrote, skipped, errors = run_split(
+                task=task,
+                source_root=source_root,
+                split_alias=alias,
+                split_dir_name=splits_map[alias],
+                tokenizer=tokenizer,
+                model=model,
+                sae_weights=sae_weights,
+                keep_npy=args.keep_npy,
+                force=args.force,
+                limit=args.limit,
+                device=device,
             )
-
-        print(f"[{split}] done in {time.time() - t_split:.1f}s", flush=True)
+            grand_seen += seen
+            grand_wrote += wrote
+            grand_skipped += skipped
+            grand_errors.extend(f"[{task}/{alias}] " + e for e in errors)
 
     print(
-        f"\n[summary] seen={total_seen} wrote={total_wrote} "
-        f"n_active stats: "
-        f"min={min(n_active_samples) if n_active_samples else 'n/a'} "
-        f"median={int(np.median(n_active_samples)) if n_active_samples else 'n/a'} "
-        f"max={max(n_active_samples) if n_active_samples else 'n/a'}",
+        f"\n[grand] elapsed={time.time() - overall_t0:.1f}s "
+        f"seen={grand_seen} wrote={grand_wrote} skipped={grand_skipped} "
+        f"errors={len(grand_errors)}",
         flush=True,
     )
+    if grand_errors:
+        print("[grand] first 20 errors:", flush=True)
+        for line in grand_errors[:20]:
+            print(f"  {line}", flush=True)
 
 
 if __name__ == "__main__":

@@ -58,6 +58,37 @@ def prepare_codex_home(target_dir: Path, env: dict[str, str] | None = None) -> P
             shutil.copy2(src, target_dir / name)
     return target_dir
 
+
+def resolve_codex_runtime(env: dict[str, str] | None = None) -> dict[str, str | None]:
+    """Determine the model + reasoning effort codex CLI will actually use.
+
+    Mirrors codex CLI resolution order: `CODEX_MODEL` env var wins, otherwise
+    the `model = "..."` line in `$CODEX_HOME/config.toml`. Same for reasoning
+    effort. ``source`` records where each value came from so audit trails are
+    not ambiguous.
+    """
+    env = env or os.environ
+    env_model = (env.get("CODEX_MODEL") or "").strip()
+    env_effort = (env.get("CODEX_REASONING_EFFORT") or "").strip()
+    cfg_model: str | None = None
+    cfg_effort: str | None = None
+    cfg_path = resolve_codex_home(env) / "config.toml"
+    if cfg_path.exists():
+        try:
+            import tomllib
+            with open(cfg_path, "rb") as f:
+                cfg = tomllib.load(f)
+            cfg_model = cfg.get("model") if isinstance(cfg.get("model"), str) else None
+            cfg_effort = cfg.get("model_reasoning_effort") if isinstance(cfg.get("model_reasoning_effort"), str) else None
+        except (OSError, Exception):
+            pass
+    return {
+        "codex_model": env_model or cfg_model,
+        "codex_model_source": "env(CODEX_MODEL)" if env_model else ("config.toml" if cfg_model else "unknown"),
+        "codex_reasoning_effort": env_effort or cfg_effort,
+        "codex_reasoning_effort_source": "env(CODEX_REASONING_EFFORT)" if env_effort else ("config.toml" if cfg_effort else "unknown"),
+    }
+
 def load_bash_exports(path: Path, base_env: dict[str, str] | None = None) -> dict[str, str]:
     """Parse simple `export KEY="VALUE"` lines from an agent bashrc into env."""
     env = dict(base_env or os.environ)
@@ -76,7 +107,11 @@ def load_bash_exports(path: Path, base_env: dict[str, str] | None = None) -> dic
         env["PATH"] = env["PATH"].replace("$PATH", os.environ.get("PATH", ""))
     return env
 
-def _build_claude_command(system_prompt: str, add_dirs: list[Path] | None) -> list[str]:
+def _build_claude_command(
+    system_prompt: str,
+    add_dirs: list[Path] | None,
+    project_settings: Path | None,
+) -> list[str]:
     cmd = [
         os.environ.get("CLAUDE_BIN", "claude"),
         "--print",
@@ -89,6 +124,9 @@ def _build_claude_command(system_prompt: str, add_dirs: list[Path] | None) -> li
         "--allowed-tools",
         "Read,Write,Edit,Bash,Glob,Grep",
     ]
+    model = os.environ.get("CLAUDE_MODEL", "").strip() or os.environ.get("ANTHROPIC_MODEL", "").strip()
+    if model:
+        cmd.extend(["--model", model])
     # Claude Code doesn't walk up the cwd tree to find .claude/settings.json,
     # so when the agent runs from a deep run/test subdirectory the project's
     # peek-block hooks would be missed. Pass --settings explicitly.

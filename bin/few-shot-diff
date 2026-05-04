@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Ask a fresh Codex helper to identify ranked distinguishing
+# features between two blind-labelled groups of few-shot examples.
+# Strategy-agent only; once per run.
+#
+# Usage: few-shot-diff
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session." >&2
+    exit 1
+fi
+
+if [[ "${AGENT_ENABLED_TOOLS+x}" == x && ",${AGENT_ENABLED_TOOLS}," != *",few-shot-diff,"* ]]; then
+    echo "Error: tool 'few-shot-diff' is not enabled for this run." >&2
+    exit 127
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/few_shot_diff.py" "$@"

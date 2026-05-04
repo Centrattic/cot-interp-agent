@@ -23,6 +23,7 @@ from datetime import datetime
 from pathlib import Path
 
 from agent_backend import (
+    resolve_codex_runtime,
     VALID_AGENT_BACKENDS,
     build_agent_launch_spec,
     get_agent_backend,
@@ -43,6 +44,7 @@ TRACES_DIR = ROOT / "agent-traces"
 PROMPTS_DIR = ROOT / "prompts"
 BIN_DIR = ROOT / "bin"
 ENV_FILE = ROOT / ".env"
+PRIVATE_VALIDATION_DIR = ROOT / ".validation-private"
 
 
 def load_dotenv(path: Path) -> None:
@@ -161,13 +163,48 @@ def populate_few_shot_from_source(
     per_class: int,
     test_keep_fields: list[str] | None,
 ) -> list[dict]:
-    """Backward-compatible wrapper: sample from the cached data pool, not raw source."""
+    """Sample a balanced few-shot set from metadata.source/<few_shot_split>.
+
+    Falls back to the cached data/<task>/few-shot pool for legacy tasks that do
+    not declare a usable source directory.
+    """
     raw_label_map = task_meta.get("label_map", {})
     def _key(k):
         try:
             return int(k)
         except (ValueError, TypeError): return k
     label_map = {_key(k): int(v) for k, v in raw_label_map.items()}
+
+    src_root = task_meta.get("source")
+    split_name = task_meta.get("few_shot_split", "few-shot")
+    if src_root:
+        src_dir = Path(src_root) / split_name
+        if src_dir.is_dir():
+            dst_dir = strategy_dir / "few-shot"
+            dst_dir.mkdir(parents=True, exist_ok=True)
+
+            from ingest_cot_proxy import sample_balanced
+
+            picked = sample_balanced(src_dir, per_class, seed, label_map)
+            index = []
+            for json_file, data in picked:
+                filtered = _apply_whitelist(data, test_keep_fields)
+                with open(dst_dir / json_file.name, "w", encoding="utf-8") as f:
+                    json.dump(filtered, f, indent=2, ensure_ascii=False)
+                index.append({
+                    "id": json_file.stem,
+                    "label": data.get("label", ""),
+                    "path": f"few-shot/{json_file.name}",
+                })
+                _copy_optional_sidecars(json_file, dst_dir)
+
+            _write_examples_csv(strategy_dir, index)
+            wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
+            print(f"Sampled {len(index)} source few-shot examples from {src_dir} (seed={seed}){wl}")
+            return index
+
+        print(f"Warning: source few-shot dir not found: {src_dir}; falling back to cached data pool")
+
     data_task = task_meta.get("data_task", task_meta.get("name"))
     return populate_few_shot(
         str(data_task),
@@ -184,6 +221,97 @@ def _write_examples_csv(strategy_dir: Path, index: list[dict]) -> None:
         writer = csv.DictWriter(f, fieldnames=["id", "label", "path"])
         writer.writeheader()
         writer.writerows(index)
+
+
+def _private_validation_dir(task_name: str, run_id: str, partition_idx: int | None = None) -> Path:
+    leaf = "single" if partition_idx is None else f"partition-{partition_idx:03d}"
+    return PRIVATE_VALIDATION_DIR / task_name / run_id / leaf
+
+
+def _write_private_validation(items: list[tuple[Path, dict]], dst_dir: Path) -> None:
+    if dst_dir.exists():
+        shutil.rmtree(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    for src, data in items:
+        with open(dst_dir / src.name, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        _copy_optional_sidecars(src, dst_dir)
+
+
+def populate_few_shot_and_validation_from_source(
+    *,
+    task_name: str,
+    run_id: str,
+    task_meta: dict,
+    strategy_dir: Path,
+    seed: int,
+    few_shot_per_class: int,
+    validation_per_class: int,
+    partition_idx: int | None,
+    test_keep_fields: list[str] | None,
+) -> list[dict]:
+    """Sample strategy few-shot plus a private balanced validation split.
+
+    The strategy workspace gets only the first ``few_shot_per_class`` examples
+    per label. The remaining validation examples keep labels in a private
+    scaffold-owned directory outside the run tree; run_tests.py later strips
+    labels before showing them to validation test agents.
+    """
+    raw_label_map = task_meta.get("label_map", {})
+    def _key(k):
+        try:
+            return int(k)
+        except (ValueError, TypeError):
+            return k
+    label_map = {_key(k): int(v) for k, v in raw_label_map.items()}
+
+    src_root = task_meta.get("source")
+    split_name = task_meta.get("few_shot_split", "few-shot")
+    src_dir = Path(src_root) / split_name if src_root else DATA_DIR / str(task_meta.get("data_task", task_name)) / "few-shot"
+    if not src_dir.is_dir():
+        print(f"Warning: validation source dir not found: {src_dir}; falling back to cached data pool")
+        src_dir = DATA_DIR / str(task_meta.get("data_task", task_name)) / "few-shot"
+
+    from ingest_cot_proxy import sample_balanced
+
+    total_per_class = few_shot_per_class + validation_per_class
+    picked = sample_balanced(src_dir, total_per_class, seed, label_map)
+
+    by_label: dict[int, list[tuple[Path, dict]]] = {0: [], 1: []}
+    for json_file, data in picked:
+        by_label[int(data["label"])].append((json_file, data))
+
+    few_shot_items: list[tuple[Path, dict]] = []
+    validation_items: list[tuple[Path, dict]] = []
+    for lbl in (0, 1):
+        few_shot_items.extend(by_label[lbl][:few_shot_per_class])
+        validation_items.extend(by_label[lbl][few_shot_per_class:])
+
+    dst_dir = strategy_dir / "few-shot"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    index = []
+    for json_file, data in few_shot_items:
+        filtered = _apply_whitelist(data, test_keep_fields)
+        with open(dst_dir / json_file.name, "w", encoding="utf-8") as f:
+            json.dump(filtered, f, indent=2, ensure_ascii=False)
+        index.append({
+            "id": json_file.stem,
+            "label": data.get("label", ""),
+            "path": f"few-shot/{json_file.name}",
+        })
+        _copy_optional_sidecars(json_file, dst_dir)
+    _write_examples_csv(strategy_dir, index)
+
+    val_dir = _private_validation_dir(task_name, run_id, partition_idx)
+    _write_private_validation(validation_items, val_dir)
+
+    wl = f" (whitelisted to {len(test_keep_fields)} fields + label)" if test_keep_fields else ""
+    print(
+        f"Sampled {len(index)} source few-shot examples and "
+        f"{len(validation_items)} private validation examples from {src_dir} "
+        f"(seed={seed}){wl}"
+    )
+    return index
 
 
 def _load_tool_readme_description(tool_name: str) -> str | None:
@@ -367,7 +495,7 @@ per-label stats on cluster count and longest-chain span.
 """.strip(),
     "sae": """### `sae` — SAE feature inspection
 
-Three subcommands for exploring a labelled **BatchTopK SAE (width 65,536,
+Subcommands for exploring a labelled **BatchTopK SAE (width 65,536,
 k=80, trainer_2)** trained on Qwen3-32B `resid_post_layer_32`. Features
 have natural-language labels (19,970 of 65,536 are labelled; the rest
 print as `(unlabeled)`).
@@ -382,15 +510,57 @@ in the current directory and prints the top matches to stdout.
 concept with different synonyms ("conclusion final answer" →
 "concluding summary complete" → "wrap up finalize") rarely surfaces
 new features. Use the strongest concept word once, look at the top
-10–20 results, then move on. Better yield from `top-features` on a
-specific few-shot example with the property you care about.
+10–20 results, then move on. For classification, `diff-features` and
+localized `top-features --last-k` usually have better signal.
 
-#### `sae top-features <example_id> [--n N]`
+#### `sae top-features <example_id> [--n N] [--last-k K] [--no-few-shot-stats]`
 Top `N` SAE features active on `<example_id>`, sorted by max activation
 across the CoT. Writes `sae_top_features_<example_id>.csv` (columns:
-`feature_id, max_activation, peak_token_pos, label`) and prints the table
-to stdout. `peak_token_pos` is **CoT-relative** — the same convention
-other tools use, so you can cross-reference.
+`feature_id, max_activation, peak_token_pos, label`, plus
+`fewshot_yes_active, fewshot_no_active, fewshot_cohens_d` when few-shot
+stats are available) and prints the table to stdout. `peak_token_pos`
+is **CoT-relative** — the same convention other tools use, so you can
+cross-reference.
+
+By default each row is enriched with how often the feature is active in
+the yes/no halves of the few-shot pool and a Cohen's d effect size on
+its max activation across all few-shot examples (treating absent as 0).
+Pass `--no-few-shot-stats` to skip the enrichment when running on the
+test side or when the few-shot pool is unavailable.
+
+Use `--last-k K` when the local state near the end of the prefix matters,
+for example `sae top-features <example_id> --last-k 150 --n 30`.
+This filters to features whose peak activation is in the final `K` CoT
+tokens. Older sidecars without stored sequence length use an approximate
+window and print a warning.
+
+#### `sae diff-features [--n N] [--min-active K] [--last-k K]`
+Ranks SAE features that differ between label=1 and label=0 across the
+current few-shot examples. Writes `sae_diff_features.csv` (or
+`sae_diff_features_last<K>.csv`) with active rates, mean max activations,
+mean peak positions, and labels. Start here when you want reusable signals:
+`sae diff-features --last-k 150 --n 40` is usually more informative than
+many broad `search` queries.
+
+#### `sae discriminate [--n N] [--min-active K] [--last-k K] [--cv-folds F]`
+Ranks features by **Cohen's d** between yes and no on the few-shot pool,
+treating unobserved features as activation 0. With `--cv-folds`, also
+reports a `cv_stability` column — the fraction of held-out splits in
+which the feature stays in the unfiltered top-N by `|d|`. High `|d|`
+with low `cv_stability` is a hint that the apparent signal is driven
+by one or two examples rather than a stable class difference. Writes
+`sae_discriminate[_last<K>].csv`.
+
+#### `sae validate --positive FID,FID,... [--negative FID,FID,...] [--threshold T] [--tie-default yes|no] [--last-k K]`
+Apply a candidate decision rule on the few-shot pool. For each example,
+counts how many of the listed `--positive` features have max activation
+above `--threshold` (default `4.0`) and likewise for `--negative`. If
+positive hits exceed negative, predicts yes; if negative exceeds
+positive, predicts no; on a tie (including 0–0) predicts the
+`--tie-default` (default `no`). Reports overall accuracy, TP/TN/FP/FN
+and gmean² on the few-shot pool, and writes
+`sae_validate[_last<K>].csv` with per-example predictions. Useful as
+a sanity check before pinning a feature list into `STRATEGY.md`.
 
 #### `sae feature <feature_id>`
 Shows how a single feature activates across **every few-shot example in
@@ -399,10 +569,20 @@ your workspace**. Writes `sae_feature_<feature_id>.csv` (columns:
 Use this to check whether a feature discriminates label=yes vs label=no.
 
 **Scope**
-- **Strategy agent:** may call all three subcommands on any few-shot `<example_id>`.
+- **Strategy agent:** may call all subcommands on any few-shot `<example_id>`.
 - **Test agent:** `top-features` only on its own `AGENT_EXAMPLE_ID`; `search` and `feature` unrestricted but rarely useful.
 
-**Output format.** All three write a CSV in the current directory and
+**Note on empty-firings cases.** With ~40-example few-shot pools, feature
+selections from `discriminate` / `top-features` often don't all carry over
+to held-out test examples — many test examples end up with zero positive
+and zero negative hits from your shortlist. When that happens, the
+`--tie-default` you chose in `validate` becomes the *de facto* prediction
+for those examples. Strategies that route empty-firings through a
+substantive text-cue fallback (e.g. read the last few sentences and apply
+phrase-level rules) tend to be more robust to this distribution shift
+than strategies that hard-default to a single label.
+
+**Output format.** All inspection commands write a CSV in the current directory and
 print a human-readable summary. CSVs overwrite on repeat (filename is
 keyed by query / fid / example id, not auto-incremented).
 """.strip(),
@@ -474,6 +654,21 @@ the LLM expansion and use an exact comma-separated list.
 Writes `word_stats_rank_<concept_slug>.csv`.
 - **Strategy agent only.**
 
+**Reading order matters.** Empirically, strategies where the test agent
+reads the example text FIRST and forms a tentative judgment, then uses
+word-stats counts only to *confirm or override* that judgment, generalize
+better than strategies where a term-count vote drives the decision and
+text is a fallback. Concretely: write rules like "predict yes when the
+text shows wrap-up cues; use term counts only to flip the call when
+counts are overwhelming and the text is genuinely ambiguous" rather
+than "if `pos_terms_count > neg_terms_count` predict yes else no."
+
+**Note on empty-firings cases.** With small few-shot pools, term lists
+selected from `tf-idf` / `compare` / `rank` often don't all carry over
+to held-out test examples — many test examples can end up with zero hits
+from your shortlist. Text-first strategies survive this naturally;
+term-count-first strategies collapse to whatever the tie-default is.
+
 **Tuning knobs (env vars)**
 - `WORD_STATS_ALPHA0`: total prior strength for the Dirichlet prior
   (default 100; smaller = data dominates more, larger = stronger
@@ -501,12 +696,28 @@ def render_tools_section(tools: list[str]) -> str:
     return "\n".join(lines)
 
 
-def generate_readme(task_meta: dict, tools: list[str], examples_index: list[dict], run_dir: Path):
+def generate_readme(
+    task_meta: dict,
+    tools: list[str],
+    examples_index: list[dict],
+    run_dir: Path,
+    validate: bool = False,
+):
     """Generate README.md for the strategy directory, tailored to task + tool set."""
     label_counts = {}
     for e in examples_index:
         label_counts[e["label"]] = label_counts.get(e["label"], 0) + 1
     label_summary = ", ".join(f"label={k}: {v}" for k, v in sorted(label_counts.items()))
+
+    validation_note = ""
+    if validate:
+        validation_note = (
+            "\nValidation mode is enabled for this run. When you call `run-tests`, "
+            "the scaffold first evaluates a private balanced validation set, "
+            "launches a reviser agent to update `STRATEGY.md` from validation "
+            "failures, and only then evaluates the final held-out test set. "
+            "You cannot inspect the validation labels or final test set directly.\n"
+        )
 
     readme = f"""# Task: {task_meta['name']}
 
@@ -527,7 +738,8 @@ def generate_readme(task_meta: dict, tools: list[str], examples_index: list[dict
 {render_tools_section(tools)}
 
 ## The `run-tests` command
-Running `run-tests` evaluates your current strategy against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the contents of this `strategy/` directory plus its own single test example. Call `run-tests` when STRATEGY.md is ready.
+Running `run-tests` freezes your current `strategy/` directory, then evaluates that snapshot against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the frozen strategy plus its own single test example. Call `run-tests` when STRATEGY.md is ready. Do not edit STRATEGY.md or supporting files after `run-tests`; post-test edits are ignored and may be reverted.
+{validation_note}
 
 ## Instructions
 1. Study the few-shot JSONs in `few-shot/` to understand what distinguishes positive from negative examples.
@@ -628,6 +840,7 @@ def _launch_strategy_agent(
     env["BASH_ENV"] = str(bashrc_path)
     env["AGENT_TYPE"] = "strategy"
     backend = get_agent_backend(env)
+    project_settings = ROOT / ".claude" / "settings.json"
     launch = build_agent_launch_spec(
         backend=backend,
         system_prompt=system_prompt,
@@ -639,7 +852,7 @@ def _launch_strategy_agent(
     tag = f" [{label}]" if label else ""
     print(f"Launching strategy agent{tag} with backend={backend}...")
     timeout_sec = int(os.environ.get("AGENT_STRATEGY_TIMEOUT_SEC", "2700"))
-    posttest_grace = int(os.environ.get("AGENT_STRATEGY_POSTTEST_GRACE_SEC", "30"))
+    posttest_grace = int(os.environ.get("AGENT_STRATEGY_POSTTEST_GRACE_SEC", "0"))
 
     # Auto-shutdown: poll for completion of run-tests (signaled by
     # results.csv being written into the partition root) and SIGTERM the
@@ -680,14 +893,10 @@ def _launch_strategy_agent(
             kill_reason = "timeout"
             print(f"Strategy agent{tag}: TIMED OUT after {timeout_sec}s")
             break
-        if (
-            strategy_md.exists()
-            and strategy_md.stat().st_size > 100
-            and results_csv.exists()
-        ):
+        if strategy_md.exists() and strategy_md.stat().st_size > 100 and results_csv.exists():
             if results_seen_at is None:
                 results_seen_at = _time.time()
-            elif _time.time() - results_seen_at >= posttest_grace:
+            if posttest_grace <= 0 or _time.time() - results_seen_at >= posttest_grace:
                 p.terminate()
                 kill_reason = "post-test-grace-elapsed"
                 break
@@ -707,6 +916,26 @@ def _launch_strategy_agent(
 
     from render_trace import write_trace_pair
     write_trace_pair(stdout, trace_base)
+
+    # The evaluated strategy is frozen by run_tests.py at the moment the
+    # strategy agent invokes run-tests. Restore that snapshot so any edits made
+    # after held-out results are available cannot become the recorded strategy.
+    frozen_strategy_dir = strategy_dir.parent / ".strategy-frozen"
+    if frozen_strategy_dir.is_dir():
+        live_tmp = strategy_dir.parent / ".strategy-live-after-tests"
+        if live_tmp.exists() or live_tmp.is_symlink():
+            if live_tmp.is_dir() and not live_tmp.is_symlink():
+                shutil.rmtree(live_tmp)
+            else:
+                live_tmp.unlink()
+        if strategy_dir.exists() or strategy_dir.is_symlink():
+            strategy_dir.replace(live_tmp)
+        shutil.copytree(frozen_strategy_dir, strategy_dir)
+        if live_tmp.exists() or live_tmp.is_symlink():
+            if live_tmp.is_dir() and not live_tmp.is_symlink():
+                shutil.rmtree(live_tmp)
+            else:
+                live_tmp.unlink()
 
     # Fallback: agent wrote STRATEGY.md but never called `test`. Invoke
     # run-tests ourselves so the partition is still evaluated.
@@ -741,10 +970,12 @@ def create_run(
     description: str | None = None,
     tools: list[str] | None = None,
     n_strategies: int = 1,
-    strategy_seed_base: int = 0,
+    strategy_seed_base: int | None = None,
     few_shot_per_class: int | None = None,
     agent_backend: str = "claude",
     codex_reasoning_effort: str | None = None,
+    validate: bool = False,
+    validate_mini: bool = False,
 ):
     """Create a new agent run.
 
@@ -777,6 +1008,11 @@ def create_run(
         print(f"Warning: SAE precompute failed: {e}")
 
     run_id = make_run_id()
+    effective_strategy_seed_base = (
+        strategy_seed_base
+        if strategy_seed_base is not None
+        else int(run_id.replace("-", ""))
+    )
     run_dir = RUNS_DIR / task_name / f"run-{run_id}"
     trace_dir = TRACES_DIR / task_name / f"run-{run_id}"
     trace_dir.mkdir(parents=True, exist_ok=True)
@@ -789,12 +1025,17 @@ def create_run(
         "status": "running",
         "agent_backend": agent_backend,
         "tools": tools,
+        "validate": validate,
+        "validate_mini": validate_mini,
         "n_strategies": n_strategies,
-        "strategy_seed_base": strategy_seed_base,
+        "strategy_seed_base": effective_strategy_seed_base,
+        "strategy_seed_base_explicit": strategy_seed_base is not None,
         "few_shot_per_class": fspc,
         "codex_reasoning_effort": codex_reasoning_effort,
         "task_meta": task_meta,
     }
+    if agent_backend == "codex":
+        run_meta["codex_runtime"] = resolve_codex_runtime()
     with open(run_dir / "run.json", "w") as f:
         json.dump(run_meta, f, indent=2)
 
@@ -809,7 +1050,10 @@ def create_run(
             bashrc_path=run_dir / "agent.bashrc",
             agent_backend=agent_backend,
             codex_reasoning_effort=codex_reasoning_effort,
-            seed=None, few_shot_per_class=fspc, from_source=False,
+            seed=effective_strategy_seed_base, few_shot_per_class=fspc, from_source=True,
+            validate=validate,
+            validate_mini=validate_mini,
+            run_id=run_id,
         )
         trace_base = trace_dir / "strategy-trace"
         code = _launch_strategy_agent(
@@ -849,7 +1093,10 @@ def create_run(
                 bashrc_path=part_bashrc,
                 agent_backend=agent_backend,
                 codex_reasoning_effort=codex_reasoning_effort,
-                seed=strategy_seed_base + k, few_shot_per_class=fspc, from_source=True,
+                seed=effective_strategy_seed_base + k, few_shot_per_class=fspc, from_source=True,
+                validate=validate,
+                validate_mini=validate_mini,
+                run_id=run_id,
             )
             partition_launch_jobs.append((
                 part_dir / "strategy",
@@ -912,11 +1159,27 @@ def _setup_partition(
     seed: int | None,
     few_shot_per_class: int,
     from_source: bool,
+    validate: bool,
+    validate_mini: bool = False,
+    run_id: str,
 ) -> list[dict]:
     """Create one partition's strategy workspace + bashrc."""
     strategy_dir.mkdir(parents=True, exist_ok=True)
 
-    if from_source:
+    use_validation_split = validate or validate_mini
+    if use_validation_split:
+        examples_index = populate_few_shot_and_validation_from_source(
+            task_name=task_name,
+            run_id=run_id,
+            task_meta=task_meta,
+            strategy_dir=strategy_dir,
+            seed=seed if seed is not None else 0,
+            few_shot_per_class=few_shot_per_class,
+            validation_per_class=int(task_meta.get("validation_per_class", 10)),
+            partition_idx=None if n_partitions == 1 else partition_idx,
+            test_keep_fields=task_meta.get("test_keep_fields"),
+        )
+    elif from_source:
         examples_index = populate_few_shot_from_source(
             task_meta=task_meta,
             strategy_dir=strategy_dir,
@@ -941,7 +1204,7 @@ def _setup_partition(
             test_keep_fields=task_meta.get("test_keep_fields"),
         )
 
-    generate_readme(task_meta, tools, examples_index, strategy_dir.parent)
+    generate_readme(task_meta, tools, examples_index, strategy_dir.parent, validate=use_validation_split)
     (strategy_dir / "STRATEGY.md").write_text(
         "# Strategy\n\n<!-- Write your classification strategy here -->\n"
     )
@@ -953,6 +1216,8 @@ def _setup_partition(
         "n_partitions": n_partitions,
         "seed": seed,
         "few_shot_per_class": few_shot_per_class,
+        "validate": validate,
+        "validate_mini": validate_mini,
     }
     with open(strategy_dir.parent / "partition.json", "w") as f:
         json.dump(part_meta, f, indent=2)
@@ -962,6 +1227,10 @@ def _setup_partition(
         "AGENT_N_PARTITIONS": str(n_partitions),
         "AGENT_DATA_TASK": str(task_meta.get("data_task", task_name)),
     }
+    if use_validation_split:
+        extra_exports["AGENT_VALIDATE"] = "1"
+    if validate_mini:
+        extra_exports["AGENT_VALIDATE_MINI"] = "1"
     if agent_backend == "codex":
         codex_home = prepare_codex_home(strategy_dir.parent / ".codex-home", os.environ)
         extra_exports["CODEX_HOME"] = codex_home.as_posix()
@@ -1035,9 +1304,9 @@ def main():
              "(cross-val-style). N=1 uses the legacy single-strategy layout.",
     )
     run_parser.add_argument(
-        "--strategy-seed-base", type=int, default=0,
-        help="Partition k's few-shot is sampled with seed = strategy_seed_base + k "
-             "(only used when --n-strategies > 1).",
+        "--strategy-seed-base", type=int, default=None,
+        help="Few-shot sampling seed base. Partition k uses seed = base + k. "
+             "Default: derive a fresh seed from the run id.",
     )
     run_parser.add_argument(
         "--few-shot-per-class", type=int, default=None,
@@ -1053,6 +1322,26 @@ def main():
         "--codex-reasoning-effort",
         choices=("low", "medium", "high", "xhigh"),
         help="Optional Codex reasoning effort override. Only applies when --agent-backend=codex.",
+    )
+    run_parser.add_argument(
+        "--validate",
+        action="store_true",
+        help=(
+            "Before final held-out tests, hold out 10 examples per class from "
+            "the strategy sample, run validation agents on them, and launch a "
+            "reviser agent to edit STRATEGY.md from validation traces/results."
+        ),
+    )
+    run_parser.add_argument(
+        "--validate_mini",
+        action="store_true",
+        help=(
+            "Same as --validate, but the reviser agent is sandboxed to a "
+            "minimal workspace containing only STRATEGY.md, val-*/example.json "
+            "(no SAE sidecars, no traces, no per-example strategy snapshot), "
+            "validation_results.csv, and validation_results_summary.json. "
+            "No research tools or external paths are reachable."
+        ),
     )
 
     status_parser = sub.add_parser("status", help="Show run status")
@@ -1081,6 +1370,9 @@ def main():
     if args.command == "init":
         init()
     elif args.command == "run":
+        if args.validate and args.validate_mini:
+            print("Error: --validate and --validate_mini are mutually exclusive.")
+            sys.exit(1)
         tools = [t.strip() for t in args.tools.split(",") if t.strip()]
         os.environ["AGENT_BACKEND"] = args.agent_backend
         create_run(
@@ -1090,6 +1382,8 @@ def main():
             few_shot_per_class=args.few_shot_per_class,
             agent_backend=args.agent_backend,
             codex_reasoning_effort=args.codex_reasoning_effort,
+            validate=args.validate,
+            validate_mini=args.validate_mini,
         )
     elif args.command == "status":
         show_status(args.run_id)

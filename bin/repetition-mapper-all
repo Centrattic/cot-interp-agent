@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Run repetition-mapper in parallel over all few-shot examples.
+# Strategy-agent only; once per run.
+#
+# Usage: repetition-mapper-all
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session." >&2
+    exit 1
+fi
+
+if [[ "${AGENT_ENABLED_TOOLS+x}" == x && ",${AGENT_ENABLED_TOOLS}," != *",repetition-mapper-all,"* ]]; then
+    echo "Error: tool 'repetition-mapper-all' is not enabled for this run." >&2
+    exit 127
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/repetition_mapper_all.py" "$@"

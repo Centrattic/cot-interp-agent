@@ -1,0 +1,29 @@
+{
+  "model": "Qwen/Qwen3-32B",
+  "sae_repo": "adamkarvonen/qwen3-32b-saes",
+  "sae_trainer": "trainer_2 (BatchTopK, width=65536, k=80, L0=80)",
+  "sae_layer": 32,
+  "hook_point": "resid_post_layer_32",
+  "sae_width": 65536,
+  "total_features": 65536,
+  "labeled_features": 19970,
+  "dead_features": 61,
+  "dense_features": 35,
+  "labeling": {
+    "method": "sae_auto_interp DefaultExplainer",
+    "explainer_model": "anthropic/claude-sonnet-4.6 via OpenRouter",
+    "n_examples_train": 40,
+    "example_ctx_len": 64,
+    "train_type": "top",
+    "threshold": 0.3
+  },
+  "corpus": {
+    "composition": "90% FineWeb (sample-10BT) + 10% LMSYS-Chat-1M",
+    "total_tokens_cached": 40000000,
+    "seq_len": 1024,
+    "outlier_filtering": "tokens with resid norm > 10x sequence median zeroed out"
+  },
+  "validation": {
+    "detection_accuracy": "96.9% (498 features, Claude Sonnet 4.6)"
+  }
+}

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Score each sentence of an example's CoT prefix for epistemic hedging,
+# via a fresh Codex helper with reasoning enabled.
+#
+# Usage: hedging-detector <example_id>
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session." >&2
+    exit 1
+fi
+
+if [[ "${AGENT_ENABLED_TOOLS+x}" == x && ",${AGENT_ENABLED_TOOLS}," != *",hedging-detector,"* ]]; then
+    echo "Error: tool 'hedging-detector' is not enabled for this run." >&2
+    exit 127
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/hedging_detector.py" "$@"

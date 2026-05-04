@@ -242,9 +242,10 @@ def write_items(items: list[tuple[Path, dict]], dst_dir: Path) -> int:
     for src, data in items:
         with open(dst_dir / src.name, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2, ensure_ascii=False)
-        npy = src.with_suffix(".npy")
-        if npy.exists():
-            shutil.copy2(npy, dst_dir / npy.name)
+        for suffix in (".npy", ".sae.npz", ".logits.npz"):
+            sidecar = src.with_suffix(suffix)
+            if sidecar.exists():
+                shutil.copy2(sidecar, dst_dir / sidecar.name)
     return len(items)
 
 

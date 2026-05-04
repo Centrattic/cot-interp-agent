@@ -15,8 +15,7 @@ def _strategy_command_section(tools: list[str]) -> str:
     lines = [
         "## Available Commands",
         "",
-        "- `run-tests` — Evaluate your strategy against held-out test examples. Call this exactly once, when your strategy is finalized.",
-        "- Run `run-tests` synchronously in the foreground. Do not background it, do not pass `run_in_background: true`, and do not monitor it with `tail -f` / `tail --follow`.",
+        "- Do **not** run `run-tests` — the orchestrator evaluates `STRATEGY.md` automatically after you exit. Any messages or commands you emit between finalizing the strategy and exiting are wasted tokens.",
     ]
     for tool_name in tools:
         lines.append(

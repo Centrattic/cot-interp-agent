@@ -153,6 +153,7 @@ def encode_example(activations: np.ndarray, weights: dict) -> dict:
             "active_feature_ids": np.array([], dtype=np.int32),
             "max_per_feature": np.array([], dtype=np.float32),
             "argmax_per_feature": np.array([], dtype=np.int32),
+            "seq_len": np.array([activations.shape[0]], dtype=np.int32),
         }
 
     # For active features: max value and argmax token position
@@ -164,6 +165,7 @@ def encode_example(activations: np.ndarray, weights: dict) -> dict:
         "active_feature_ids": active_ids,
         "max_per_feature": max_vals,
         "argmax_per_feature": argmax_pos,
+        "seq_len": np.array([activations.shape[0]], dtype=np.int32),
     }
 
 
@@ -238,7 +240,21 @@ def precompute_task(scaffold_root: Path, task_name: str):
             break
 
     if not has_npy:
-        print(f"No .npy activation files found for task '{task_name}'. Skipping SAE precompute.")
+        existing = sum(
+            len(list(d.glob("*.sae.npz")))
+            for d in [few_shot_dir, test_dir]
+            if d.exists()
+        )
+        if existing:
+            print(
+                f"Found {existing} existing .sae.npz sidecar(s) for task "
+                f"'{task_name}'; no .npy files to encode."
+            )
+        else:
+            print(
+                f"No .npy activation files or .sae.npz sidecars found for "
+                f"task '{task_name}'. Skipping SAE precompute."
+            )
         return
 
     print(f"Precomputing SAE features for task '{task_name}'...")

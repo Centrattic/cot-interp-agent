@@ -29,7 +29,25 @@
       "Bash(claude --print --output-format stream-json --verbose)",
       "Bash(chmod +x *)",
       "Bash(git status *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(git ls-tree *)",
+      "Bash(git pull *)",
+      "Bash(git config *)",
+      "Bash(git -C /Users/divanova/cot-interp-agent remote -v)",
+      "Bash(git -C /Users/divanova/cot-interp-agent branch --show-current)",
+      "Bash(git -C /Users/divanova/cot-interp-agent ls-files data/)",
+      "Bash(git *)",
+      "Bash(awk '{print $3}')",
+      "Bash(aws s3 *)",
+      "Bash(xargs -I{} python3 -c \"import json; d=json.load\\(open\\('/Users/divanova/cot-interp-agent/datasets/5/qwen-3-32b/test/{}'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\('thinking len:', len\\(d.get\\('thinking', ''\\)\\)\\)\")",
+      "Bash(awk -F, '{print $2}' /Users/divanova/cot-interp-agent/results_summary.csv)",
+      "Bash(nohup /Users/divanova/cot-interp-agent/logs/claude_bare_sweep_20260429/launch.sh)",
+      "Bash(echo \"launched pid=$!\")",
+      "Bash(ps -p 63311 -o pid,etime,stat,command)",
+      "Bash(date -Iseconds)",
+      "Bash(ps -p 3170 -o pid,etime,stat,command)",
+      "Bash(pmset -g assertions)",
+      "Bash(ps -o pid,stat,etime,pcpu,pmem,command -p 36181 36166 36173)"
     ]
   }
 }

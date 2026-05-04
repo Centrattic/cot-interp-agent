@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Text-statistics tools over the few-shot set.
+# Subcommands: count | tf-idf | compare | rank
+#
+# Usage:
+#   word-stats count <sample_id> <word_or_phrase> [<word_or_phrase> ...]
+#   word-stats tf-idf
+#   word-stats compare <sample_id>
+#   word-stats rank <concept> [--words "w1,w2,..."]
+
+set -euo pipefail
+
+if [[ -z "${SCAFFOLD_ROOT:-}" ]]; then
+    echo "Error: SCAFFOLD_ROOT not set. This command must be run inside an agent session." >&2
+    exit 1
+fi
+
+if [[ "${AGENT_ENABLED_TOOLS+x}" == x && ",${AGENT_ENABLED_TOOLS}," != *",word-stats,"* ]]; then
+    echo "Error: tool 'word-stats' is not enabled for this run." >&2
+    exit 127
+fi
+
+PYTHON="${PYTHON:-$(command -v python3 2>/dev/null || command -v python 2>/dev/null)}"
+exec "$PYTHON" "$SCAFFOLD_ROOT/src/tools/word_stats.py" "$@"
