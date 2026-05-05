@@ -145,6 +145,33 @@ def _user_preference_sycophancy_parts(
     return _wrap_chat(tokenizer, example["prompt"]), _extract_cot_text(example["thinking"])
 
 
+def _gemma_self_deletion_parts(
+    example: dict, tokenizer, source_root: Path, split: str
+) -> tuple[str, str]:
+    """Return (prefix_str, cot_str) for a gemma_self_deletion example.
+
+    These examples store the full visible conversation transcript in
+    `example["messages"]`, ending with the assistant turn that the agent sees.
+    To recover the token positions for the logit/entropy tools, treat every
+    message before the last assistant response as prompt prefix and the last
+    assistant message content as the visible continuation span.
+    """
+    messages = example.get("messages")
+    if not isinstance(messages, list) or len(messages) < 2:
+        raise ValueError("gemma_self_deletion example missing usable messages transcript")
+
+    last = messages[-1]
+    if not isinstance(last, dict) or last.get("role") != "assistant":
+        raise ValueError("gemma_self_deletion transcript must end with an assistant message")
+
+    prefix = tokenizer.apply_chat_template(
+        messages[:-1],
+        add_generation_prompt=True,
+        tokenize=False,
+    )
+    return prefix, _extract_cot_text(last.get("content"))
+
+
 # --- task 5: stanford_hint -----------------------------------------------
 # Ported from cot-proxy-tasks/src/tasks/hinted_cot/prompts.py.
 # The prompts/<split>/<qid>.json file has question_text, choices (dict
@@ -163,9 +190,18 @@ _STANFORD_PROFESSOR_TEMPLATE = (
 def _stanford_hint_parts(
     example: dict, tokenizer, source_root: Path, split: str
 ) -> tuple[str, str]:
-    # Prompt files are keyed by pair_key = "<qid>__<direction>" because each
-    # question has two intervention prompts (suggest_majority, suggest_minority).
-    rec = _load_prompt_record(source_root, split, example["pair_key"])
+    # Clean-task examples inline the prompt ingredients directly; the original
+    # task uses prompt files keyed by pair_key = "<qid>__<direction>" because
+    # each question has two intervention prompts.
+    if "question_text" in example and "choices" in example:
+        rec = {
+            "question_text": example["question_text"],
+            "choices": example["choices"],
+            "hint_value": example["hint_value"],
+        }
+    else:
+        rec = _load_prompt_record(source_root, split, example["pair_key"])
+
     choices = rec["choices"]  # {"A": "Yes", "B": "No"} (dict in this pipeline)
     if isinstance(choices, dict):
         labels = list(choices.keys())
@@ -253,6 +289,7 @@ def _atypical_answer_parts(
 TASK_PARTS_BUILDERS = {
     "reasoning_termination": _reasoning_termination_parts,
     "termination": _reasoning_termination_parts,
+    "gemma_self_deletion": _gemma_self_deletion_parts,
     "atypical_cot_length": _atypical_cot_length_parts,
     "followup_confidence": _followup_confidence_parts,
     "user_preference_sycophancy": _user_preference_sycophancy_parts,
@@ -268,6 +305,36 @@ def canonical_task_name(task: str) -> str:
             if base in TASK_PARTS_BUILDERS:
                 return base
     return task
+
+
+def _resolve_source_root(scaffold_root: Path, meta: dict) -> Path:
+    """Return a usable cot-proxy-tasks source root for the task metadata.
+
+    Historical run metadata often stores an absolute machine-specific path in
+    ``meta["source"]``. Prefer that when it exists, but fall back to the local
+    sibling checkout ``../cot-proxy-tasks/datasets/<dataset_id>/<model>``.
+    """
+    source = meta.get("source")
+    if source:
+        source_root = Path(source)
+        if source_root.exists():
+            return source_root
+
+    dataset_id = meta.get("dataset_id")
+    model = meta.get("model")
+    if dataset_id and model:
+        fallback = (
+            scaffold_root.parent / "cot-proxy-tasks" / "datasets" / str(dataset_id) / str(model)
+        )
+        if fallback.exists():
+            return fallback
+
+    if source:
+        return Path(source)
+    raise FileNotFoundError(
+        "task metadata is missing a usable source root and no local "
+        "../cot-proxy-tasks fallback could be constructed"
+    )
 
 
 def build_prompt_parts(
@@ -303,7 +370,7 @@ def load_task_meta(scaffold_root: Path, task: str) -> tuple[dict, Path, dict[str
             run_meta = json.loads(run_json.read_text(encoding="utf-8"))
             meta = run_meta.get("task_meta")
             if isinstance(meta, dict) and meta.get("source"):
-                source_root = Path(meta["source"])
+                source_root = _resolve_source_root(scaffold_root, meta)
                 split_of = {
                     "few-shot": meta.get("few_shot_split", "train"),
                     "test": meta.get("test_split", "test"),
@@ -312,7 +379,7 @@ def load_task_meta(scaffold_root: Path, task: str) -> tuple[dict, Path, dict[str
 
     task_dir = scaffold_root / "data" / task
     meta = json.loads((task_dir / "metadata.json").read_text(encoding="utf-8"))
-    source_root = Path(meta["source"])
+    source_root = _resolve_source_root(scaffold_root, meta)
     split_of = {
         "few-shot": meta.get("few_shot_split", "train"),
         "test": meta.get("test_split", "test"),
