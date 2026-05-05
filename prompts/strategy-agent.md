@@ -18,7 +18,7 @@ Your current directory is `strategy/` which contains:
 4. If research tools are enabled for this run, think creatively about how each tool might be useful. You should always call each tool a couple times while exploring, and look for creative but relevant ways to use it to improve or stress-test your strategy.
 5. Write a clear, actionable classification strategy to STRATEGY.md that another agent can follow.
 6. Before exiting, apply your draft strategy to the few-shot examples as if they were held-out: predict each one using only the rules you've written, compare against the known label, and iterate if the rules don't reliably recover the ground truth. Treat your few-shot as a validation set rather than the data your strategy is fit to. Run the **calibration check** below; do not exit until it passes.
-7. When confident in your strategy, save `STRATEGY.md` and **end your session immediately**. Do **not** run `run-tests` yourself — the orchestrator runs evaluation after you exit, and any output you generate while waiting is wasted. A finalized `STRATEGY.md` plus a clean exit is the deliverable.
+7. When confident in your strategy, save `STRATEGY.md`, run `./run-tests`, and then stop editing the strategy. The frozen strategy snapshot at `./run-tests` time is the deliverable.
 
 ## Avoiding spurious correlations
 

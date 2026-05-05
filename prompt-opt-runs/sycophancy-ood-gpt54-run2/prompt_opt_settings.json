@@ -1,0 +1,44 @@
+{
+  "tasks": [
+    "sycophancy_ood"
+  ],
+  "random_seed": 0,
+  "query_size": 40,
+  "pilot_query_size": 20,
+  "top_k_pairs": 3,
+  "episodes": 1,
+  "max_prompt_count": 16,
+  "min_prompt_count": 3,
+  "max_parallel_requests": 32,
+  "request_timeout_sec": 60,
+  "api_base": "https://openrouter.ai/api/v1/chat/completions",
+  "api_key_env": "OPENROUTER_API_KEY",
+  "monitor_model": "openai/gpt-5.4",
+  "monitor_provider": "openai",
+  "evolve_api_base": "https://openrouter.ai/api/v1",
+  "evolve_api_key_env": "OPENROUTER_API_KEY",
+  "evolve_model": "openai/gpt-4.1-mini",
+  "evolve_provider": "",
+  "evolve_temperature": 0.7,
+  "iterations": 3,
+  "support_splits": [
+    "few-shot"
+  ],
+  "query_splits": [
+    "test"
+  ],
+  "allowed_shot_counts": [
+    10,
+    20,
+    30,
+    40
+  ],
+  "prompt_count_schedule": [
+    5,
+    4,
+    3
+  ],
+  "artifact_preview_chars": 240,
+  "score_penalty_per_prompt": 0.002,
+  "score_penalty_per_shot_step": 0.0025
+}

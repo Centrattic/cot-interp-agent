@@ -1,0 +1,5 @@
+label,tool,run_id,created,note,n,miss,acc,tpr,tnr,gmean2
+"Current
+no tool",no_tool,run-20260424-164555-541763,2026-04-24T16:45:55.542663,best comparable no-tool baseline,100,0,0.62,0.86,0.38,0.327
+"Updated
+top_10_logits",top_10_logits,run-20260426-221205-352085,2026-04-26T22:12:05.352253,current tool run after task/logit-tool updates,100,0,0.64,0.78,0.5,0.39

@@ -311,10 +311,15 @@ def run_single_test(
     p.stdin.close()
 
     out_chunks: list[str] = []
+    raw_trace_path = trace_base.with_suffix(".jsonl")
+    raw_trace_path.parent.mkdir(parents=True, exist_ok=True)
     def _drain():
         assert p.stdout is not None
-        for line in iter(p.stdout.readline, ""):
-            out_chunks.append(line)
+        with raw_trace_path.open("w", encoding="utf-8") as raw_f:
+            for line in iter(p.stdout.readline, ""):
+                out_chunks.append(line)
+                raw_f.write(line)
+                raw_f.flush()
     drainer = _threading.Thread(target=_drain, daemon=True)
     drainer.start()
 

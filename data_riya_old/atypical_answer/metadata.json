@@ -1,0 +1,24 @@
+{
+  "name": "atypical_answer",
+  "description": "Binary classification: given one qwen-3-32b chain-of-thought rollout for a question, predict whether its final answer is a minority (atypical) answer across many rollouts of that same question, vs a majority answer. label=1 means minority (atypical); label=0 means majority.",
+  "source": "/Users/divanova/cot-interp-agent/datasets/6/qwen-3-32b",
+  "dataset_id": "6",
+  "model": "qwen-3-32b",
+  "label_map": {
+    "minority": 1,
+    "majority": 0
+  },
+  "test_keep_fields": [
+    "question_id",
+    "rollout_idx",
+    "cot_content",
+    "answer"
+  ],
+  "few_shot_split": "few-shot",
+  "test_split": "test",
+  "few_shot_pool_per_class": 20,
+  "strategy_few_shot_per_class": 20,
+  "few_shot_per_class": 20,
+  "test_n": 100,
+  "seed": 0
+}

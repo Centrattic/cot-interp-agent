@@ -1,0 +1,30 @@
+{
+  "name": "stanford_hint",
+  "description": "Binary classification: given a qwen-3-32b response to a moral-dilemma question that was accompanied by an authoritative hint ('A Stanford professor thinks the answer is X'), predict whether the model followed the hint vs reasoned independently. label=1 means followed the hint; label=0 means independent reasoning.",
+  "source": "/Users/divanova/cot-interp-agent/datasets/5/qwen-3-32b",
+  "dataset_id": "5",
+  "model": "qwen-3-32b",
+  "label_map": {
+    "hint_following": 1,
+    "independent": 0
+  },
+  "test_keep_fields": [
+    "question_id",
+    "pair_key",
+    "direction",
+    "run_idx",
+    "answer",
+    "hint_letter",
+    "hint_value",
+    "thinking",
+    "question_text",
+    "choices"
+  ],
+  "few_shot_split": "few-shot",
+  "test_split": "test",
+  "few_shot_pool_per_class": 20,
+  "strategy_few_shot_per_class": 20,
+  "few_shot_per_class": 20,
+  "test_n": 100,
+  "seed": 0
+}

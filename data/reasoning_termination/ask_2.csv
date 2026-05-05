@@ -1,0 +1,4 @@
+status,example_id,question,question_tokens,model,num_samples,attempt_index,sample_index,is_valid,parsed_label,response,response_normalized,response_tokens,response_raw
+success,bb_logical_deduction_five_objects_v_001_rollout_060_prefix_0,"Based only on this example JSON, will the model emit </think> within the next 100 tokens? Reply yes or no only.",28,qwen/qwen3-32b,3,1,1,true,no,No.,no,2,No.
+success,bb_logical_deduction_five_objects_v_001_rollout_060_prefix_0,"Based only on this example JSON, will the model emit </think> within the next 100 tokens? Reply yes or no only.",28,qwen/qwen3-32b,3,2,2,true,no,no,no,1,no
+success,bb_logical_deduction_five_objects_v_001_rollout_060_prefix_0,"Based only on this example JSON, will the model emit </think> within the next 100 tokens? Reply yes or no only.",28,qwen/qwen3-32b,3,3,3,true,no,No.,no,2,No.

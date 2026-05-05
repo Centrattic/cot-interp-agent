@@ -1,0 +1,21 @@
+{
+  "id": "4d5ce7f9-3c85-4ece-9801-e727b69331e4",
+  "generation": 0,
+  "iteration": 0,
+  "timestamp": 1777859311.5821,
+  "parent_id": null,
+  "metrics": {
+    "combined_score": 0.0,
+    "best_pair_score": 0.0,
+    "family_top2_mean": 0.0,
+    "prompt_count": 1,
+    "best_prompt_index": 0,
+    "best_shot_count": 10,
+    "pilot_rows": 1,
+    "full_rows": 1,
+    "task_count": 1,
+    "task_sycophancy_ood_mean_gmean2": 0.0
+  },
+  "language": "unknown",
+  "saved_at": 1777859331.1798244
+}

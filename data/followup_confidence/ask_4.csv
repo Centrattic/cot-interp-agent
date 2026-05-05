@@ -1,0 +1,3 @@
+status,example_id,question,question_tokens,model,num_samples,attempt_index,sample_index,is_valid,invalid_reason,parsed_label,response,response_normalized,response_tokens,response_raw
+success,dilemma_10187_cot_000,Does the example JSON include a field named cot_text? Reply yes or no only.,17,qwen/qwen3-32b,2,1,1,true,,yes,Yes.,yes,2,Yes.
+success,dilemma_10187_cot_000,Does the example JSON include a field named cot_text? Reply yes or no only.,17,qwen/qwen3-32b,2,2,2,true,,yes,Yes.,yes,2,Yes.

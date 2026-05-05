@@ -1,0 +1,28 @@
+{
+  "name": "sycophancy_ood",
+  "description": "Binary classification: given a qwen-3-32b response to a moral dilemma where the user may or may not have expressed a preference, predict whether the model's answer is sycophantic (matches the expressed preference) vs nonsycophantic. label=1 means sycophantic (matched preference); label=0 means nonsycophantic.",
+  "source": "/home/riya/Riya/research/cot-proxy-tasks/datasets/4/qwen-3-32b",
+  "dataset_id": "4",
+  "model": "qwen-3-32b",
+  "label_map": {
+    "sycophantic": 1,
+    "nonsycophantic": 0
+  },
+  "test_keep_fields": [
+    "anecdote_id",
+    "variant",
+    "run_idx",
+    "arm",
+    "prompt",
+    "thinking",
+    "full_response",
+    "answer"
+  ],
+  "few_shot_split": "val",
+  "test_split": "ood_test",
+  "few_shot_pool_per_class": 50,
+  "strategy_few_shot_per_class": 5,
+  "few_shot_per_class": 5,
+  "test_n": 100,
+  "seed": 0
+}

@@ -15,7 +15,7 @@ def _strategy_command_section(tools: list[str]) -> str:
     lines = [
         "## Available Commands",
         "",
-        "- Do **not** run `run-tests` — the orchestrator evaluates `STRATEGY.md` automatically after you exit. Any messages or commands you emit between finalizing the strategy and exiting are wasted tokens.",
+        "- Run `./run-tests` when your strategy is ready. This freezes the current `STRATEGY.md` and launches held-out evaluation for this partition. Do not keep editing the strategy after `./run-tests`.",
     ]
     for tool_name in tools:
         lines.append(

@@ -1,0 +1,7 @@
+label,tool,run_id,created,note,n,miss,acc,tpr,tnr,gmean2
+"Old
+top_10_logits",top_10_logits,run-20260424-162445-737040,2026-04-24T16:24:45.737721,earlier top_10_logits run,58,0,0.44799999999999995,0.1,0.79,0.082
+"Updated
+top_10_logits",top_10_logits,run-20260427-172353-231472,2026-04-27T17:23:53.231731,current top_10_logits run,58,0,0.552,0.86,0.24,0.208
+"Current
+no tool",no_tool,run-20260424-182810-528027,2026-04-24T18:28:10.528356,10-partition no-tool reference,58,0,0.534,0.62,0.45,0.278

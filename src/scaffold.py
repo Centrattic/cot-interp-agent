@@ -712,7 +712,7 @@ def generate_readme(
     validation_note = ""
     if validate:
         validation_note = (
-            "\nValidation mode is enabled for this run. When you call `run-tests`, "
+            "\nValidation mode is enabled for this run. When you call `./run-tests`, "
             "the scaffold first evaluates a private balanced validation set, "
             "launches a reviser agent to update `STRATEGY.md` from validation "
             "failures, and only then evaluates the final held-out test set. "
@@ -737,17 +737,28 @@ def generate_readme(
 ## Research Tools
 {render_tools_section(tools)}
 
-## The `run-tests` command
-Running `run-tests` freezes your current `strategy/` directory, then evaluates that snapshot against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the frozen strategy plus its own single test example. Call `run-tests` when STRATEGY.md is ready. Do not edit STRATEGY.md or supporting files after `run-tests`; post-test edits are ignored and may be reverted.
+## The `./run-tests` command
+Running `./run-tests` freezes your current `strategy/` directory, then evaluates that snapshot against all held-out test examples in parallel. Each test example is given to an independent test agent that sees only the frozen strategy plus its own single test example. Call `./run-tests` when STRATEGY.md is ready. Do not edit STRATEGY.md or supporting files after `./run-tests`; post-test edits are ignored and may be reverted.
 {validation_note}
 
 ## Instructions
 1. Study the few-shot JSONs in `few-shot/` to understand what distinguishes positive from negative examples.
 2. Write a clear, concrete classification strategy in `STRATEGY.md`. Test agents follow it literally.
 3. Optionally create supporting CSVs or notes in this directory; reference them from STRATEGY.md.
-4. Run `run-tests` when ready.
+4. Run `./run-tests` when ready.
 """
     (run_dir / "strategy" / "README.md").write_text(readme, encoding="utf-8")
+
+
+def _write_run_tests_wrapper(strategy_dir: Path) -> None:
+    wrapper = strategy_dir / "run-tests"
+    wrapper.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        f'exec "{(BIN_DIR / "run-tests").as_posix()}" "$@"\n',
+        encoding="utf-8",
+    )
+    wrapper.chmod(0o755)
 
 
 def _write_bashrc(
@@ -759,6 +770,7 @@ def _write_bashrc(
     extra_exports: dict[str, str] | None = None,
 ) -> None:
     """Write the per-agent bash environment file sourced via BASH_ENV."""
+    preferred_venv_bin = (Path.home() / "Riya" / ".venv" / "bin").as_posix()
     lines = [
         "# Auto-generated bash environment for agent run",
         f'export SCAFFOLD_ROOT="{ROOT.as_posix()}"',
@@ -766,7 +778,7 @@ def _write_bashrc(
         f'export AGENT_TASK="{task_name}"',
         f'export AGENT_RUN_ID="{run_id}"',
         f'export AGENT_BACKEND="{agent_backend}"',
-        f'export PATH="{BIN_DIR.as_posix()}:$PATH"',
+        f'export PATH="{preferred_venv_bin}:{BIN_DIR.as_posix()}:$PATH"',
         f'export PYTHON="{Path(sys.executable).as_posix()}"',
     ]
     for k, v in (extra_exports or {}).items():
@@ -833,7 +845,7 @@ def _launch_strategy_agent(
         "Read README.md in the current directory for the task brief, available tools, "
         "and workspace layout. Develop a classification strategy, write it to STRATEGY.md, "
         "test each enabled research tool at least once and look for creative relevant uses, "
-        "and run `run-tests` when ready."
+        "and run `./run-tests` when ready."
     )
     system_prompt = build_strategy_system_prompt(PROMPTS_DIR, tools)
     env = load_bash_exports(bashrc_path, os.environ.copy())
@@ -875,10 +887,15 @@ def _launch_strategy_agent(
     p.stdin.close()
 
     out_chunks: list[str] = []
+    raw_trace_path = trace_base.with_suffix(".jsonl")
+    raw_trace_path.parent.mkdir(parents=True, exist_ok=True)
     def _drain():
         assert p.stdout is not None
-        for line in iter(p.stdout.readline, ""):
-            out_chunks.append(line)
+        with raw_trace_path.open("w", encoding="utf-8") as raw_f:
+            for line in iter(p.stdout.readline, ""):
+                out_chunks.append(line)
+                raw_f.write(line)
+                raw_f.flush()
     drainer = _threading.Thread(target=_drain, daemon=True)
     drainer.start()
 
@@ -1205,6 +1222,7 @@ def _setup_partition(
         )
 
     generate_readme(task_meta, tools, examples_index, strategy_dir.parent, validate=use_validation_split)
+    _write_run_tests_wrapper(strategy_dir)
     (strategy_dir / "STRATEGY.md").write_text(
         "# Strategy\n\n<!-- Write your classification strategy here -->\n"
     )
@@ -1352,7 +1370,7 @@ def main():
     human_parser.add_argument("--run-dir", help="Open an existing human run directory")
     human_parser.add_argument(
         "--tools",
-        default="ask,top_10_logits,top10_entropy,force",
+        default="sample,top_10_logits,top10_entropy,force",
         help="Comma-separated list of tools to enable for a new run",
     )
     human_parser.add_argument("--description", help="Override task description for a new run")

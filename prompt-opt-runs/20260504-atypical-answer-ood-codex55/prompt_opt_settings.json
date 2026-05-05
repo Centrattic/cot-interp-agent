@@ -1,0 +1,49 @@
+{
+  "tasks": [
+    "atypical_answer_ood"
+  ],
+  "random_seed": 0,
+  "query_size": 100000,
+  "pilot_query_size": 20,
+  "top_k_pairs": 3,
+  "episodes": 1,
+  "max_prompt_count": 16,
+  "min_prompt_count": 1,
+  "max_parallel_requests": 8,
+  "request_timeout_sec": 120,
+  "api_base": "https://openrouter.ai/api/v1/chat/completions",
+  "api_key_env": "OPENROUTER_API_KEY",
+  "monitor_backend": "codex",
+  "monitor_model": "gpt-5.5",
+  "monitor_provider": "",
+  "monitor_reasoning_effort": "medium",
+  "evolve_api_base": "https://openrouter.ai/api/v1",
+  "evolve_api_key_env": "OPENROUTER_API_KEY",
+  "evolve_model": "gpt-5.5",
+  "evolve_backend": "codex",
+  "evolve_provider": "",
+  "evolve_reasoning_effort": "medium",
+  "evolve_temperature": 0.7,
+  "iterations": 3,
+  "support_splits": [
+    "few-shot"
+  ],
+  "query_splits": [
+    "test"
+  ],
+  "allowed_shot_counts": [
+    10,
+    20,
+    30,
+    40
+  ],
+  "prompt_count_schedule": [
+    5,
+    5,
+    5,
+    5
+  ],
+  "artifact_preview_chars": 240,
+  "score_penalty_per_prompt": 0.002,
+  "score_penalty_per_shot_step": 0.0025
+}
