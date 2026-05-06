@@ -119,7 +119,7 @@ def collect() -> dict:
             # Honor codex_runtime when present (newer runs)
             cr = meta.get("codex_runtime") or {}
             cm = (cr.get("codex_model") or "").strip()
-            if cm and "gpt-5.5" not in cm.lower():
+            if cm and "gpt-5.4" not in cm.lower():
                 continue
             # Canonical config is 20 few-shot per class (40 total). Drop
             # one-off experiments at other sizes from the comparison table.
@@ -256,7 +256,7 @@ def make_chart(summary: dict, png_path: Path) -> None:
     ax.set_xticklabels([f"task {i+1}\n{t}" for i, (t, _) in enumerate(TASKS)],
                        rotation=20, ha="right", fontsize=8)
     ax.set_ylabel("mean gmean²")
-    ax.set_title("Cross-task tool comparison (gpt-5.5 medium · 10 partitions · 40 few-shot)")
+    ax.set_title("Cross-task tool comparison (gpt-5.4 medium · 10 partitions · 40 few-shot)")
     ax.legend(loc="upper right", ncol=4, fontsize=9)
     ax.set_ylim(0, max(0.7, *(max((d.get("mean_gmean2", 0) or 0)
                                   for d in summary[t].values()) for t, _ in TASKS)) + 0.15)

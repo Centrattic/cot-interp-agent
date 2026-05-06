@@ -1,0 +1,47 @@
+{
+  "task": "reasoning_termination",
+  "program": "/home/riya/Riya/research/cot-proxy-tasks/prompt-opt-runs/20260506-reasoning-termination-ood-codex55-q100-w15-fs10-hillclimb-r10/hillclimb_iterations/iteration_00_seed.py",
+  "shots": 10,
+  "splits": {
+    "id_test": {
+      "runs": 3,
+      "query_size": 86,
+      "gmean2": {
+        "mean": 0.2711375518298179,
+        "std": 0.05210366513706387
+      },
+      "acc": {
+        "mean": 0.624031007751938,
+        "std": 0.03552384259655685
+      },
+      "tpr": {
+        "mean": 0.9689922480620156,
+        "std": 0.026853500892540717
+      },
+      "tnr": {
+        "mean": 0.27906976744186046,
+        "std": 0.04651162790697676
+      }
+    },
+    "test": {
+      "runs": 5,
+      "query_size": 58,
+      "gmean2": {
+        "mean": 0.006896551724137931,
+        "std": 0.015421158465515792
+      },
+      "acc": {
+        "mean": 0.503448275862069,
+        "std": 0.0077105792327579106
+      },
+      "tpr": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "tnr": {
+        "mean": 0.006896551724137931,
+        "std": 0.015421158465515792
+      }
+    }
+  }
+}

@@ -40,7 +40,7 @@ def launch(task: str) -> subprocess.Popen[str]:
             "AGENT_TEST_RETRY_ATTEMPTS": "8",
             "AGENT_TEST_RETRY_DELAY_SEC": "10",
             "AGENT_PARTITION_RESUME_ATTEMPTS": "8",
-            "CODEX_MODEL": "gpt-5.5",
+            "CODEX_MODEL": "gpt-5.4",
             "CODEX_REASONING_EFFORT": "medium",
         }
     )

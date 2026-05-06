@@ -18,7 +18,7 @@ BASE_ENV = {
     "AGENT_TEST_RETRY_ATTEMPTS": "8",
     "AGENT_TEST_RETRY_DELAY_SEC": "10",
     "AGENT_PARTITION_RESUME_ATTEMPTS": "8",
-    "CODEX_MODEL": "gpt-5.5",
+    "CODEX_MODEL": "gpt-5.4",
     "CODEX_REASONING_EFFORT": "medium",
 }
 
@@ -59,7 +59,7 @@ def make_jobs() -> list[tuple[str, list[str], dict[str, str] | None]]:
                     "bash",
                     "-lc",
                     f"source .venv/bin/activate && "
-                    f"CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium "
+                    f"CODEX_MODEL=gpt-5.4 CODEX_REASONING_EFFORT=medium "
                     f"AGENT_STRATEGY_PARALLEL=1 AGENT_TEST_MAX_WORKERS=2 "
                     f"AGENT_TEST_RETRY_ATTEMPTS=8 AGENT_TEST_RETRY_DELAY_SEC=10 "
                     f"AGENT_PARTITION_RESUME_ATTEMPTS=8 "

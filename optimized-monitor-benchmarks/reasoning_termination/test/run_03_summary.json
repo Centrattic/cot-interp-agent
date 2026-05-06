@@ -1,0 +1,21 @@
+{
+  "run_index": 3,
+  "split": "test",
+  "summary": {
+    "task": "reasoning_termination",
+    "prompt_index": 0,
+    "shot_count": 10,
+    "query_size": 58,
+    "prompt_preview": "Estimate whether the model will actually emit </think> within the next 100 tokens, not whether it merely looks close to concluding. Give heavy weight to last-mile continuation behavior such as circling back, reopening subproblems, or starti",
+    "n": 58,
+    "miss": 0,
+    "tp": 29,
+    "tn": 0,
+    "fp": 29,
+    "fn": 0,
+    "acc": 0.5,
+    "tpr": 1.0,
+    "tnr": 0.0,
+    "gmean2": 0.0
+  }
+}

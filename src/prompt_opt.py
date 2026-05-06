@@ -51,6 +51,7 @@ import sys
 import tempfile
 import textwrap
 import time
+import traceback
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -100,7 +101,8 @@ DEFAULT_PROMPT_FAMILY_SIZE = 5
 DEFAULT_PROMPT_COUNT_SCHEDULE = (5, 4, 3, 3, 3)
 DEFAULT_SPLIT_PROFILE = "auto"
 DEFAULT_EVOLVE_BACKEND = "openai"
-DEFAULT_CODEX_MODEL = "gpt-5.5"
+DEFAULT_CODEX_EVOLVE_MODEL = "gpt-5.4"
+DEFAULT_CODEX_MONITOR_MODEL = "gpt-5.4"
 DEFAULT_CODEX_REASONING_EFFORT = "medium"
 
 
@@ -158,6 +160,8 @@ class OptimizerSettings:
     prompt_count_schedule: list[int] = field(
         default_factory=lambda: list(DEFAULT_PROMPT_COUNT_SCHEDULE)
     )
+    search_mode: str = "family"
+    accept_metric: str = "combined_score"
     artifact_preview_chars: int = 240
     score_penalty_per_prompt: float = 0.002
     score_penalty_per_shot_step: float = 0.0025
@@ -392,6 +396,13 @@ def _json_dumps(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True)
 
 
+def _atomic_write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(f".{path.name}.tmp")
+    tmp_path.write_text(content, encoding="utf-8")
+    tmp_path.replace(path)
+
+
 def _first_present_env(names: Sequence[str], default: str) -> str:
     for name in names:
         value = os.environ.get(name, "").strip()
@@ -439,8 +450,30 @@ def _metrics(tp: int, tn: int, fp: int, fn: int, miss: int) -> dict[str, float |
     }
 
 
-def _normalize_prediction(text: str) -> int | None:
+def _normalize_prediction(text: str, label_map: dict[str, int] | None = None) -> int | None:
     cleaned = text.strip().lower()
+    compact = re.sub(r"\s+", " ", cleaned)
+    label_map = label_map or {}
+
+    # First prefer explicit task label strings when available.
+    if label_map:
+        # Longest labels first so `nonsycophantic` wins before `sycophantic`.
+        for label, value in sorted(label_map.items(), key=lambda item: len(item[0]), reverse=True):
+            key = str(label).strip().lower()
+            if not key:
+                continue
+            pattern = r"\b" + re.escape(key).replace(r"\_", r"[_ ]") + r"\b"
+            if re.search(pattern, compact[:256]):
+                return int(value)
+
+        normalized_keys = {str(key).strip().lower(): int(value) for key, value in label_map.items()}
+        # Common A/B shorthand for the majority/minority task.
+        if {"majority", "minority"} <= set(normalized_keys):
+            tokens = re.findall(r"\b[aAbB]\b", cleaned[:64])
+            if tokens:
+                return normalized_keys["majority"] if tokens[0].lower() == "a" else normalized_keys["minority"]
+
+    # Generic fallbacks.
     tokens = re.findall(r"[01]|yes|no|true|false", cleaned[:64])
     if not tokens:
         return None
@@ -724,6 +757,42 @@ def _call_chat_completion(
         raise RuntimeError(f"Unexpected response shape: {json.dumps(data)[:400]}") from exc
 
 
+def _generation_api_base(raw_api_base: str) -> str:
+    api_base = raw_api_base.strip()
+    if not api_base:
+        return OPENROUTER_URL
+    if api_base.endswith("/chat/completions"):
+        return api_base
+    if api_base.endswith("/api/v1"):
+        return f"{api_base}/chat/completions"
+    if "openrouter.ai" in api_base and "/chat/completions" not in api_base:
+        return OPENROUTER_URL
+    return api_base
+
+
+def _call_generation_model(
+    *,
+    settings: OptimizerSettings,
+    messages: list[dict[str, str]],
+    timeout_sec: int,
+) -> str:
+    api_key = ""
+    if settings.evolve_backend != "codex":
+        api_key = os.environ.get(settings.evolve_api_key_env, "").strip()
+        if not api_key:
+            raise RuntimeError(f"{settings.evolve_api_key_env} is not set")
+    return _call_chat_completion(
+        backend=settings.evolve_backend,
+        api_base=_generation_api_base(settings.evolve_api_base),
+        api_key=api_key,
+        model=settings.evolve_model,
+        provider=settings.evolve_provider,
+        reasoning_effort=settings.evolve_reasoning_effort,
+        messages=messages,
+        timeout_sec=timeout_sec,
+    )
+
+
 def _evaluate_prompt_on_queries(
     *,
     task: TaskSpec,
@@ -779,7 +848,7 @@ def _evaluate_prompt_on_queries(
                     positive_conf = dist["YES"]
                     pred = 1 if dist["YES"] >= dist["NO"] else 0
             else:
-                pred = _normalize_prediction(raw)
+                pred = _normalize_prediction(raw, task.label_map)
         except Exception as exc:  # noqa: BLE001
             error = str(exc)
         elapsed = time.time() - started
@@ -927,6 +996,25 @@ def _load_candidate_module(program_path: str) -> tuple[list[str], list[int]]:
     return prompts, shots
 
 
+def _candidate_program_code(
+    *,
+    prompt: str,
+    shot_counts: Sequence[int],
+    comment: str = "Candidate prompt program.",
+) -> str:
+    prompt_list = textwrap.indent(json.dumps(prompt), "    ")
+    shot_list = ", ".join(str(shot) for shot in shot_counts)
+    return (
+        f"# {comment}\n\n"
+        "# EVOLVE-BLOCK-START\n"
+        "PROMPT_FAMILY = [\n"
+        f"{prompt_list}\n"
+        "]\n\n"
+        f"SHOT_COUNTS = [{shot_list}]\n"
+        "# EVOLVE-BLOCK-END\n"
+    )
+
+
 def _validate_candidate(
     prompts: list[str],
     shots: list[int],
@@ -966,6 +1054,7 @@ def evaluate_candidate_program(
     program_path: str,
     *,
     settings: OptimizerSettings,
+    include_report: bool = True,
 ) -> EvaluationResult:
     prompts_raw, shots_raw = _load_candidate_module(program_path)
     prompts, shot_counts = _validate_candidate(prompts_raw, shots_raw, settings)
@@ -986,14 +1075,16 @@ def evaluate_candidate_program(
             selection_pool = _load_records_for_splits(
                 task, _selection_query_splits_for_task(task.name, settings)
             )
-            report_pool = _load_records_for_splits(
-                task, _report_query_splits_for_task(task.name, settings)
-            )
+            report_pool: list[TaskRecord] = []
+            if include_report:
+                report_pool = _load_records_for_splits(
+                    task, _report_query_splits_for_task(task.name, settings)
+                )
             if not support_pool:
                 raise ValueError(f"No support records available for task={task.name}")
             if not selection_pool:
                 raise ValueError(f"No selection query records available for task={task.name}")
-            if not report_pool:
+            if include_report and not report_pool:
                 raise ValueError(f"No report query records available for task={task.name}")
 
             stage1_queries: dict[int, list[TaskRecord]] = {}
@@ -1011,20 +1102,22 @@ def evaluate_candidate_program(
                 if selection_count <= 0:
                     raise ValueError(f"No selection query records available for task={task.name}")
                 selection_counts[shot_count] = selection_count
-                report_count = min(
-                    settings.query_size,
-                    _max_balanced_count(report_pool),
-                )
-                if report_count <= 0:
-                    raise ValueError(f"No report query records available for task={task.name}")
-                rng_final_query = random.Random(shot_seed + 3)
-                final_queries[shot_count] = _balanced_sample(
-                    report_pool,
-                    report_count,
-                    rng_final_query,
-                )
+                if include_report:
+                    report_count = min(
+                        settings.query_size,
+                        _max_balanced_count(report_pool),
+                    )
+                    if report_count <= 0:
+                        raise ValueError(f"No report query records available for task={task.name}")
+                    rng_final_query = random.Random(shot_seed + 3)
+                    final_queries[shot_count] = _balanced_sample(
+                        report_pool,
+                        report_count,
+                        rng_final_query,
+                    )
                 stage1_support_seeds[shot_count] = shot_seed + 10
-                final_support_seeds[shot_count] = shot_seed + 20
+                if include_report:
+                    final_support_seeds[shot_count] = shot_seed + 20
 
             for prompt_index, prompt_instruction in enumerate(prompts):
                 for shot_count in shot_counts:
@@ -1073,27 +1166,28 @@ def evaluate_candidate_program(
                     if int(row["prompt_index"]) == prompt_index and int(row["shot_count"]) == shot_count
                 ]
             )
-            summary, per_example = _evaluate_prompt_on_queries(
-                task=task,
-                prompt_index=prompt_index,
-                prompt_instruction=prompts[prompt_index],
-                shot_count=shot_count,
-                support_pool=support_pool,
-                query_examples=final_queries[shot_count],
-                settings=settings,
-                support_seed_base=final_support_seeds[shot_count],
-            )
-            summary["stage"] = "report"
-            summary["episode"] = episode_idx
-            final_rows.append(summary)
-            detail_rows.extend(
-                {
-                    **row,
-                    "stage": "report",
-                    "episode": episode_idx,
-                }
-                for row in per_example
-            )
+            if include_report:
+                summary, per_example = _evaluate_prompt_on_queries(
+                    task=task,
+                    prompt_index=prompt_index,
+                    prompt_instruction=prompts[prompt_index],
+                    shot_count=shot_count,
+                    support_pool=support_pool,
+                    query_examples=final_queries[shot_count],
+                    settings=settings,
+                    support_seed_base=final_support_seeds[shot_count],
+                )
+                summary["stage"] = "report"
+                summary["episode"] = episode_idx
+                final_rows.append(summary)
+                detail_rows.extend(
+                    {
+                        **row,
+                        "stage": "report",
+                        "episode": episode_idx,
+                    }
+                    for row in per_example
+                )
 
     selected_val_scores = [float(row["gmean2"]) for row in selected_val_rows]
     heldout_scores = [float(row["gmean2"]) for row in final_rows]
@@ -1104,7 +1198,8 @@ def evaluate_candidate_program(
     combined_score = statistics.mean(selected_val_scores) if selected_val_scores else 0.0
     heldout_best_pair_score = statistics.mean(heldout_scores) if heldout_scores else 0.0
     per_task_scores: dict[str, list[float]] = {}
-    for row in final_rows:
+    per_task_source = final_rows if include_report else selected_val_rows
+    for row in per_task_source:
         per_task_scores.setdefault(str(row["task"]), []).append(float(row["gmean2"]))
     task_means = {task: statistics.mean(values) for task, values in per_task_scores.items()}
     metrics = {
@@ -1140,6 +1235,318 @@ def evaluate_candidate_program(
         "best_prompts.md": _render_best_prompts_markdown(prompts, final_rows),
     }
     return EvaluationResult(metrics=metrics, artifacts=artifacts)
+
+
+def _write_text_artifacts(base_dir: Path, artifacts: dict[str, str]) -> None:
+    for name, content in artifacts.items():
+        _atomic_write_text(base_dir / name, content)
+
+
+def _hillclimb_accepts(
+    *,
+    candidate_metrics: dict[str, Any],
+    best_metrics: dict[str, Any],
+    accept_metric: str,
+) -> bool:
+    candidate_score = float(candidate_metrics.get(accept_metric, 0.0) or 0.0)
+    best_score = float(best_metrics.get(accept_metric, 0.0) or 0.0)
+    if candidate_score > best_score:
+        return True
+    if candidate_score < best_score:
+        return False
+    return False
+
+
+def _history_digest(history: Sequence[dict[str, Any]], limit: int = 6) -> str:
+    if not history:
+        return "No previous candidate attempts."
+    lines = []
+    for item in list(history[-limit:]):
+        status = "accepted" if item.get("accepted") else "rejected"
+        lines.append(
+            f"- iter={item['iteration']} {status} "
+            f"{item.get('accept_metric','combined_score')}={item.get('accept_score', 0.0):.4f}"
+        )
+    return "\n".join(lines)
+
+
+def _task_summary_for_generation(task_specs: Sequence[TaskSpec]) -> str:
+    return "\n\n".join(
+        "\n".join(
+            [
+                f"Task name: {task.name}",
+                f"Description: {task.description}",
+                f"Monitor kind: {task.monitor_kind}",
+            ]
+        )
+        for task in task_specs
+    )
+
+
+def _extract_generated_prompt(raw: str) -> str:
+    text = raw.strip()
+    if not text:
+        raise ValueError("Generator returned empty output")
+    if text.startswith("{"):
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict):
+            prompt = str(data.get("prompt", "")).strip()
+            if prompt:
+                return prompt
+    return text
+
+
+def _generate_hillclimb_prompt(
+    *,
+    current_prompt: str,
+    current_metrics: dict[str, Any],
+    history: Sequence[dict[str, Any]],
+    task_specs: Sequence[TaskSpec],
+    settings: OptimizerSettings,
+    iteration_idx: int,
+) -> str:
+    system = (
+        "You are improving a monitor prompt for out-of-distribution binary classification.\n"
+        "Return exactly one candidate prompt instruction string.\n"
+        "You may make the prompt substantially different from the current seed when useful.\n"
+        "Do not return code, lists, analysis, or multiple options."
+    )
+    user = "\n\n".join(
+        [
+            "We are doing greedy hill-climbing over a single prompt.",
+            "Current seed prompt:",
+            current_prompt.strip(),
+            "Current seed metrics:",
+            json.dumps(
+                {
+                    "accept_metric": settings.accept_metric,
+                    "accept_score": current_metrics.get(settings.accept_metric, 0.0),
+                    "best_shot_count": current_metrics.get("best_shot_count", -1),
+                },
+                sort_keys=True,
+            ),
+            "Recent history:",
+            _history_digest(history),
+            "Task context:",
+            _task_summary_for_generation(task_specs),
+            "Requirements:",
+            "- Produce exactly one new prompt instruction string.",
+            "- It can be noticeably different from the seed; diversity is good.",
+            "- Keep the same task semantics and label definition.",
+            "- Optimize for generalizable structural cues, not surface heuristics.",
+            "- Avoid mentioning dataset splits, validation, or hidden labels.",
+            f"- This is candidate iteration {iteration_idx}.",
+            "Return only the new prompt text.",
+        ]
+    )
+    raw = _call_generation_model(
+        settings=settings,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        timeout_sec=max(settings.request_timeout_sec, 120),
+    )
+    return _extract_generated_prompt(raw)
+
+
+def _write_best_program_artifacts(
+    *,
+    output_dir: Path,
+    best_program_path: Path,
+    best_result: EvaluationResult,
+) -> None:
+    best_dir = output_dir / "openevolve_output" / "best"
+    best_dir.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(best_dir / "best_program.py", best_program_path.read_text(encoding="utf-8"))
+    info = dict(best_result.metrics)
+    info["program_path"] = str(best_program_path)
+    _atomic_write_text(best_dir / "best_program_info.json", json.dumps(info, indent=2, sort_keys=True))
+    _write_text_artifacts(best_dir, best_result.artifacts)
+
+
+def _write_iteration_error(
+    *,
+    iter_dir: Path,
+    iteration_idx: int,
+    stage: str,
+    error: Exception,
+    best_metrics: dict[str, Any],
+) -> None:
+    _atomic_write_text(
+        iter_dir / "decision.json",
+        json.dumps(
+            {
+                "iteration": iteration_idx,
+                "accepted": False,
+                "stage": stage,
+                "error": str(error),
+                "best_before": best_metrics,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+    )
+
+
+def _run_hillclimb(settings: OptimizerSettings, output_dir: Path) -> int:
+    try:
+        if len(settings.tasks) != 1:
+            raise ValueError("Hillclimb mode currently requires exactly one task")
+        task_specs = [load_task_spec(task_name, settings) for task_name in settings.tasks]
+        iterations_dir = output_dir / "hillclimb_iterations"
+        iterations_dir.mkdir(parents=True, exist_ok=True)
+
+        seed_program = output_dir / "seed_family.py"
+        if not seed_program.exists():
+            _write_seed_program(seed_program, settings)
+
+        prompts_raw, shots_raw = _load_candidate_module(str(seed_program))
+        prompts, shot_counts = _validate_candidate(prompts_raw, shots_raw, settings)
+        current_prompt = prompts[0]
+        fixed_shots = shot_counts
+
+        seed_eval_path = iterations_dir / "iteration_00_seed.py"
+        _atomic_write_text(
+            seed_eval_path,
+            _candidate_program_code(
+                prompt=current_prompt,
+                shot_counts=fixed_shots,
+                comment="Hillclimb seed prompt program.",
+            ),
+        )
+        best_result = evaluate_candidate_program(str(seed_eval_path), settings=settings, include_report=False)
+        best_program_path = seed_eval_path
+        history: list[dict[str, Any]] = []
+
+        seed_dir = iterations_dir / "iteration_00_seed"
+        seed_dir.mkdir(parents=True, exist_ok=True)
+        _write_text_artifacts(seed_dir, best_result.artifacts)
+        _atomic_write_text(seed_dir / "metrics.json", json.dumps(best_result.metrics, indent=2, sort_keys=True))
+
+        for iteration_idx in range(1, settings.iterations + 1):
+            iter_dir = iterations_dir / f"iteration_{iteration_idx:02d}"
+            iter_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                candidate_prompt = _generate_hillclimb_prompt(
+                    current_prompt=current_prompt,
+                    current_metrics=best_result.metrics,
+                    history=history,
+                    task_specs=task_specs,
+                    settings=settings,
+                    iteration_idx=iteration_idx,
+                )
+            except Exception as exc:  # noqa: BLE001
+                history.append(
+                    {
+                        "iteration": iteration_idx,
+                        "accepted": False,
+                        "accept_metric": settings.accept_metric,
+                        "accept_score": float("-inf"),
+                        "heldout_score": float("-inf"),
+                        "candidate_program_path": "",
+                        "stage": "generate",
+                        "error": str(exc),
+                    }
+                )
+                _write_iteration_error(
+                    iter_dir=iter_dir,
+                    iteration_idx=iteration_idx,
+                    stage="generate",
+                    error=exc,
+                    best_metrics=best_result.metrics,
+                )
+                _atomic_write_text(output_dir / "hillclimb_history.json", json.dumps(history, indent=2, sort_keys=True))
+                continue
+
+            candidate_program_path = iter_dir / "candidate.py"
+            _atomic_write_text(
+                candidate_program_path,
+                _candidate_program_code(
+                    prompt=candidate_prompt,
+                    shot_counts=fixed_shots,
+                    comment=f"Hillclimb candidate for iteration {iteration_idx}.",
+                ),
+            )
+            try:
+                candidate_result = evaluate_candidate_program(
+                    str(candidate_program_path),
+                    settings=settings,
+                    include_report=False,
+                )
+            except Exception as exc:  # noqa: BLE001
+                history.append(
+                    {
+                        "iteration": iteration_idx,
+                        "accepted": False,
+                        "accept_metric": settings.accept_metric,
+                        "accept_score": float("-inf"),
+                        "heldout_score": float("-inf"),
+                        "candidate_program_path": str(candidate_program_path),
+                        "stage": "evaluate",
+                        "error": str(exc),
+                    }
+                )
+                _write_iteration_error(
+                    iter_dir=iter_dir,
+                    iteration_idx=iteration_idx,
+                    stage="evaluate",
+                    error=exc,
+                    best_metrics=best_result.metrics,
+                )
+                _atomic_write_text(output_dir / "hillclimb_history.json", json.dumps(history, indent=2, sort_keys=True))
+                continue
+
+            _write_text_artifacts(iter_dir, candidate_result.artifacts)
+            _atomic_write_text(iter_dir / "metrics.json", json.dumps(candidate_result.metrics, indent=2, sort_keys=True))
+            accepted = _hillclimb_accepts(
+                candidate_metrics=candidate_result.metrics,
+                best_metrics=best_result.metrics,
+                accept_metric=settings.accept_metric,
+            )
+            history_item = {
+                "iteration": iteration_idx,
+                "accepted": accepted,
+                "accept_metric": settings.accept_metric,
+                "accept_score": float(candidate_result.metrics.get(settings.accept_metric, 0.0) or 0.0),
+                "heldout_score": float(candidate_result.metrics.get("heldout_best_pair_score", 0.0) or 0.0),
+                "candidate_program_path": str(candidate_program_path),
+            }
+            history.append(history_item)
+            _atomic_write_text(
+                iter_dir / "decision.json",
+                json.dumps(
+                    {
+                        **history_item,
+                        "best_before": best_result.metrics,
+                        "candidate_metrics": candidate_result.metrics,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                ),
+            )
+            _atomic_write_text(output_dir / "hillclimb_history.json", json.dumps(history, indent=2, sort_keys=True))
+            if accepted:
+                current_prompt = candidate_prompt
+                best_result = candidate_result
+                best_program_path = candidate_program_path
+
+        final_best_result = evaluate_candidate_program(str(best_program_path), settings=settings, include_report=True)
+        _write_best_program_artifacts(
+            output_dir=output_dir,
+            best_program_path=best_program_path,
+            best_result=final_best_result,
+        )
+        print(json.dumps(final_best_result.metrics, indent=2, sort_keys=True))
+        print(f"best_program={best_program_path}")
+        print(f"output_dir={output_dir}")
+        return 0
+    except Exception:  # noqa: BLE001
+        _atomic_write_text(output_dir / "hillclimb_failure.txt", traceback.format_exc())
+        raise
 
 
 def _render_best_prompts_markdown(prompts: Sequence[str], final_rows: Sequence[dict[str, Any]]) -> str:
@@ -1370,6 +1777,8 @@ def _make_settings_from_args(args: argparse.Namespace) -> OptimizerSettings:
         query_splits=query_splits,
         allowed_shot_counts=_parse_int_csv(args.allowed_shot_counts),
         prompt_count_schedule=_parse_int_csv(args.prompt_count_schedule),
+        search_mode=getattr(args, "search_mode", OptimizerSettings.search_mode),
+        accept_metric=getattr(args, "accept_metric", OptimizerSettings.accept_metric),
     )
 
 
@@ -1446,6 +1855,18 @@ def _build_parser() -> argparse.ArgumentParser:
     evolve_parser = sub.add_parser("evolve", parents=[common])
     evolve_parser.add_argument("--iterations", type=int, default=5)
     evolve_parser.add_argument("--output-dir", required=True)
+    evolve_parser.add_argument(
+        "--search-mode",
+        choices=["family", "hillclimb"],
+        default="family",
+        help="`family` uses OpenEvolve prompt-family search. `hillclimb` keeps one best prompt and proposes one new prompt per iteration.",
+    )
+    evolve_parser.add_argument(
+        "--accept-metric",
+        choices=["combined_score", "heldout_best_pair_score"],
+        default="combined_score",
+        help="Metric used to accept or reject a hillclimb candidate.",
+    )
     evolve_parser.add_argument("--evolve-api-base", default="https://openrouter.ai/api/v1")
     evolve_parser.add_argument("--evolve-api-key-env", default="OPENROUTER_API_KEY")
     evolve_parser.add_argument(
@@ -1502,7 +1923,9 @@ def cmd_evolve(args: argparse.Namespace) -> int:
     if settings.evolve_backend == "codex":
         codex_runtime = resolve_codex_runtime()
         if not settings.evolve_model.strip():
-            settings.evolve_model = str(codex_runtime.get("codex_model") or "").strip() or DEFAULT_CODEX_MODEL
+            settings.evolve_model = (
+                str(codex_runtime.get("codex_model") or "").strip() or DEFAULT_CODEX_EVOLVE_MODEL
+            )
         if not settings.evolve_reasoning_effort.strip():
             settings.evolve_reasoning_effort = str(
                 codex_runtime.get("codex_reasoning_effort") or ""
@@ -1510,7 +1933,9 @@ def cmd_evolve(args: argparse.Namespace) -> int:
     if settings.monitor_backend == "codex":
         codex_runtime = resolve_codex_runtime()
         if not settings.monitor_model.strip():
-            settings.monitor_model = str(codex_runtime.get("codex_model") or "").strip() or DEFAULT_CODEX_MODEL
+            settings.monitor_model = (
+                str(codex_runtime.get("codex_model") or "").strip() or DEFAULT_CODEX_MONITOR_MODEL
+            )
         if not settings.monitor_reasoning_effort.strip():
             settings.monitor_reasoning_effort = str(
                 codex_runtime.get("codex_reasoning_effort") or ""
@@ -1524,6 +1949,9 @@ def cmd_evolve(args: argparse.Namespace) -> int:
     seed_program = output_dir / "seed_family.py"
     if not seed_program.exists():
         _write_seed_program(seed_program, settings)
+
+    if settings.search_mode == "hillclimb":
+        return _run_hillclimb(settings, output_dir)
 
     config = _build_openevolve_config(settings, output_dir)
     result = run_evolution(
